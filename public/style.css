@@ -33,6 +33,23 @@ body {
   box-shadow: 0 0 0 4px rgba(192,132,252,0.14), 0 8px 32px rgba(0,0,0,0.45);
 }
 
+/* ── 手机端搜索栏 ──────────────────────────────── */
+.search-bar-mobile {
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  height: 40px;
+  border-radius: 9999px;
+  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.search-bar-mobile:focus-within {
+  border-color: rgba(192,132,252,0.5);
+  box-shadow: 0 0 0 3px rgba(192,132,252,0.12), 0 6px 24px rgba(0,0,0,0.4);
+}
+
 /* ── 语言切换 ──────────────────────────────────── */
 .lang-toggle {
   background: rgba(0,0,0,0.5);
@@ -62,4 +79,29 @@ input:focus { outline: none; }
 /* ── 登录面板过渡 ─────────────────────────────── */
 #panel-login-form, #panel-register-form, #panel-logged-in {
   transition: opacity 0.3s ease;
+}
+
+/* ── 移动端触摸优化 ────────────────────────────── */
+input, button {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* 手机端输入框增大触摸区域 */
+@media (max-width: 767px) {
+  input {
+    font-size: 16px !important; /* 防止 iOS 缩放 */
+  }
+}
+
+/* 手机端底部登录面板 — 安全区域适配 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #login-panel > .relative {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
 }

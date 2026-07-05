@@ -48,6 +48,11 @@ const searchBar = document.getElementById('search-bar');
 const searchInput = document.getElementById('search-input');
 const searchClear = document.getElementById('search-clear');
 
+// 手机端搜索栏
+const searchBarMobile = document.getElementById('search-bar-mobile');
+const searchInputMobile = document.getElementById('search-input-mobile');
+const searchClearMobile = document.getElementById('search-clear-mobile');
+
 const btnZh = document.getElementById('btn-zh');
 const btnEn = document.getElementById('btn-en');
 
@@ -71,17 +76,28 @@ const displayUsername = document.getElementById('display-username');
 const displayEmail = document.getElementById('display-email');
 const notifText = document.getElementById('notif-text');
 
-// ── 搜索栏 ──────────────────────────────────────
-searchInput.addEventListener('focus', () => searchBar.classList.add('focused'));
-searchInput.addEventListener('blur', () => searchBar.classList.remove('focused'));
-searchInput.addEventListener('input', () => {
-  searchClear.classList.toggle('hidden', !searchInput.value);
+// ── 搜索栏（桌面端）─────────────────────────────
+searchInput?.addEventListener('focus', () => searchBar?.classList.add('focused'));
+searchInput?.addEventListener('blur', () => searchBar?.classList.remove('focused'));
+searchInput?.addEventListener('input', () => {
+  searchClear?.classList.toggle('hidden', !searchInput.value);
 });
-searchClear.addEventListener('mousedown', (e) => {
+searchClear?.addEventListener('mousedown', (e) => {
   e.preventDefault();
   searchInput.value = '';
   searchClear.classList.add('hidden');
   searchInput.focus();
+});
+
+// ── 搜索栏（手机端）─────────────────────────────
+searchInputMobile?.addEventListener('input', () => {
+  searchClearMobile?.classList.toggle('hidden', !searchInputMobile.value);
+});
+searchClearMobile?.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  searchInputMobile.value = '';
+  searchClearMobile.classList.add('hidden');
+  searchInputMobile.focus();
 });
 
 // ── 语言切换 ────────────────────────────────────
@@ -117,6 +133,7 @@ function setLang(l) {
 
 function updateTexts() {
   searchInput.placeholder = tl('searchPlaceholder');
+  if (searchInputMobile) searchInputMobile.placeholder = tl('searchPlaceholder');
   panelLabel.textContent = tl('loginLabel');
   loginUsername.placeholder = tl('userPlaceholder');
   loginPassword.placeholder = tl('passPlaceholder');
