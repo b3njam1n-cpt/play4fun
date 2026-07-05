@@ -1,6 +1,7 @@
 // ============================================================
 // Play4Fun — Frontend Logic (Figma Design)
 // ============================================================
+console.log('🚀 app.js v2 已加载 — addEventListener 版本');
 
 const API_BASE = '/auth';
 
@@ -84,9 +85,15 @@ searchClear.addEventListener('mousedown', (e) => {
 });
 
 // ── 语言切换 ────────────────────────────────────
-window.switchLang = function(l) {
-  setLang(l);
-};
+btnZh.addEventListener('click', () => {
+  console.log('🖱️ 点击了中文按钮');
+  setLang('zh');
+});
+btnEn.addEventListener('click', () => {
+  console.log('🖱️ 点击了 EN 按钮');
+  setLang('en');
+});
+console.log('✅ 语言切换监听器已绑定: btnZh, btnEn');
 
 function setLang(l) {
   if (lang === l) return;
