@@ -1,0 +1,43 @@
+# play4fun - Cloudflare Workers 配置
+name = "play4fun"
+main = "src/index.ts"
+compatibility_date = "2025-07-05"
+
+# 本地开发服务端口
+[dev]
+port = 8787
+
+# 静态资源（自动服务，无需 Worker 处理）
+[assets]
+directory = "./public"
+
+# 自定义域名路由
+workers_dev = false
+[[routes]]
+pattern = "vieplay4fun.win/*"
+zone_name = "vieplay4fun.win"
+
+[[routes]]
+pattern = "*.vieplay4fun.win/*"
+zone_name = "vieplay4fun.win"
+
+# ── 非敏感环境变量（明文，可在 Cloudflare Dashboard 查看）────
+[vars]
+ENVIRONMENT = "development"
+
+# ── 敏感环境变量管理方式 ─────────────────────────
+# 本地开发: 创建 .env 文件（cp .env.example .env），wrangler dev 自动读取
+# 生产环境: wrangler secret put JWT_SECRET   → 加密存储在 Cloudflare
+#            wrangler secret put GOOGLE_CLIENT_SECRET
+# CI/CD:    GitHub Secrets → wrangler deploy 时注入
+
+# D1 数据库
+[[d1_databases]]
+binding = "DB"
+database_name = "play4fun-db"
+database_id = "7059f459-8f84-4ab1-8d8a-789bd6a6b218"
+
+# TODO: 创建 KV 命名空间后取消注释
+# [[kv_namespaces]]
+# binding = "KV"
+# id = ""

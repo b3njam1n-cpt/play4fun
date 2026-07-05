@@ -1,0 +1,29 @@
+{
+  "name": "play4fun",
+  "version": "1.0.0",
+  "description": "Personal homepage with SSO/SLO on Cloudflare Workers",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "db:local": "wrangler d1 execute play4fun-db --local --file=src/db/schema.sql",
+    "db:remote": "wrangler d1 execute play4fun-db --file=src/db/schema.sql"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.12.27",
+    "jose": "^6.2.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.107.0"
+  }
+}
