@@ -84,15 +84,23 @@ searchClear.addEventListener('mousedown', (e) => {
 });
 
 // ── 语言切换 ────────────────────────────────────
-btnZh.addEventListener('click', () => setLang('zh'));
-btnEn.addEventListener('click', () => setLang('en'));
+window.switchLang = function(l) {
+  setLang(l);
+};
 
 function setLang(l) {
+  if (lang === l) return;
   lang = l;
-  btnZh.className = 'px-3 py-1 rounded-full text-xs font-semibold transition-all ' +
-    (l === 'zh' ? 'lang-active' : 'lang-inactive');
-  btnEn.className = 'px-3 py-1 rounded-full text-xs font-semibold transition-all ' +
-    (l === 'en' ? 'lang-active' : 'lang-inactive');
+
+  // 用 classList 切换，不覆盖 Tailwind 类
+  if (l === 'zh') {
+    btnZh.classList.add('active');
+    btnEn.classList.remove('active');
+  } else {
+    btnEn.classList.add('active');
+    btnZh.classList.remove('active');
+  }
+
   document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
   document.body.style.fontFamily = l === 'zh'
     ? "'Noto Sans SC', sans-serif"
