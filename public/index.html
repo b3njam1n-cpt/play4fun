@@ -4,124 +4,181 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Play4Fun</title>
-  <!-- Tailwind CSS CDN（后续可改用构建版本） -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/style.css">
+  <!-- Google Fonts: DM Sans + Noto Sans SC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-950 text-white min-h-screen">
+<body class="overflow-hidden">
 
   <!-- ============================================================ -->
-  <!-- 未登录：登录/注册表单                                         -->
+  <!-- 全屏背景                                                      -->
   <!-- ============================================================ -->
-  <div id="auth-view" class="flex items-center justify-center min-h-screen">
-    <div class="w-full max-w-md bg-gray-900 rounded-2xl shadow-2xl p-8 border border-gray-800">
-
-      <!-- Tab 切换 -->
-      <div class="flex mb-6 border-b border-gray-800">
-        <button id="tab-login-btn"
-                class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-400 font-semibold transition"
-                onclick="switchTab('login')">
-          登录
-        </button>
-        <button id="tab-register-btn"
-                class="flex-1 pb-3 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-300 transition"
-                onclick="switchTab('register')">
-          注册
-        </button>
-      </div>
-
-      <!-- 登录表单 -->
-      <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">邮箱</label>
-          <input type="email" name="email" required
-                 class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-white"
-                 placeholder="your@email.com">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">密码</label>
-          <input type="password" name="password" required
-                 class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-white"
-                 placeholder="••••••••">
-        </div>
-        <button type="submit"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition">
-          登录
-        </button>
-        <p id="login-error" class="text-red-400 text-sm hidden"></p>
-      </form>
-
-      <!-- 注册表单 -->
-      <form id="register-form" class="space-y-4 hidden" onsubmit="handleRegister(event)">
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">邮箱</label>
-          <input type="email" name="email" required
-                 class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-white"
-                 placeholder="your@email.com">
-        </div>
-        <div>
-          <label class="block text-sm text-gray-400 mb-1">密码</label>
-          <input type="password" name="password" required minlength="8"
-                 class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 text-white"
-                 placeholder="至少 8 位">
-        </div>
-        <button type="submit"
-                class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-semibold transition">
-          创建账户
-        </button>
-        <p id="register-error" class="text-red-400 text-sm hidden"></p>
-      </form>
-
-      <!-- 未来 Google 登录入口 -->
-      <div class="mt-6 pt-4 border-t border-gray-800">
-        <p class="text-center text-xs text-gray-600 mb-3">—— 未来将支持 ——</p>
-        <button disabled
-                class="w-full py-2.5 bg-gray-800 text-gray-600 rounded-lg font-semibold cursor-not-allowed">
-          Google 登录（开发中）
-        </button>
-      </div>
-    </div>
+  <div class="fixed inset-0 z-0">
+    <img
+      src="https://images.unsplash.com/photo-1550859492-d5da9d8e45f3?w=1920&h=1080&fit=crop&auto=format"
+      alt="background"
+      class="w-full h-full object-cover"
+    />
+    <div class="absolute inset-0 bg-black/20"></div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- 已登录：个人主页                                              -->
+  <!-- 顶部导航                                                      -->
   <!-- ============================================================ -->
-  <div id="home-view" class="hidden">
-    <header class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-blue-400">play4fun</h1>
-      <div class="flex items-center gap-4">
-        <span id="user-email" class="text-gray-400 text-sm"></span>
-        <button onclick="handleLogout()"
-                class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">
-          登出
+  <header class="relative z-20 w-full flex items-center justify-between px-6 pt-5 gap-4">
+
+    <!-- 左侧 Logo -->
+    <div class="flex items-center gap-2 min-w-[140px]">
+      <svg class="w-5 h-5 text-violet-300" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      <span class="text-white font-semibold text-sm tracking-wide">Play4Fun</span>
+    </div>
+
+    <!-- 中间搜索栏 (Dynamic Island) -->
+    <div class="flex-1 flex justify-center">
+      <div id="search-wrapper" class="search-wrapper transition-all">
+        <div id="search-bar" class="flex items-center gap-2 px-4 rounded-full search-bar">
+          <svg class="w-4 h-4 text-white/45 flex-shrink-0 search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            id="search-input"
+            type="text"
+            placeholder="搜索任何内容…"
+            class="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/30 min-w-0"
+          />
+          <button id="search-clear" class="text-white/35 hover:text-white/70 transition-colors hidden">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧语言切换 -->
+    <div class="min-w-[140px] flex justify-end">
+      <div id="lang-toggle" class="flex items-center gap-1 p-1 rounded-full lang-toggle">
+        <svg class="w-3.5 h-3.5 text-white/35 mx-1.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <button id="btn-zh" class="px-3 py-1 rounded-full text-xs font-semibold transition-all lang-active">中文</button>
+        <button id="btn-en" class="px-3 py-1 rounded-full text-xs font-semibold transition-all">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- 右侧登录面板                                                   -->
+  <!-- ============================================================ -->
+  <div id="login-panel" class="fixed top-0 right-0 h-full z-30 flex flex-col justify-center" style="width:30vw">
+    <!-- 渐变遮罩 -->
+    <div class="absolute inset-0 pointer-events-none"
+         style="background:linear-gradient(to right,transparent 0%,rgba(0,0,0,0.15) 50%,rgba(0,0,0,0.3) 100%)"></div>
+
+    <div class="relative px-10 py-10 flex flex-col gap-5">
+
+      <!-- ── 未登录：表单 ── -->
+      <div id="panel-login-form">
+        <p id="panel-label" class="text-white/30 text-[11px] font-medium tracking-[0.15em] uppercase mb-5">登录</p>
+
+        <input
+          id="login-username"
+          type="text"
+          placeholder="用户名"
+          class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border-0 transition-all bg-transparent mb-3"
+        />
+        <input
+          id="login-password"
+          type="password"
+          placeholder="密码"
+          class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border-0 transition-all bg-transparent mb-5"
+        />
+
+        <button id="btn-login" class="w-full py-2.5 rounded-full text-sm font-bold text-black bg-white hover:bg-white/90 active:scale-[0.97] transition-all">
+          登录
+        </button>
+
+        <p id="login-error" class="text-red-300 text-xs mt-2 text-center hidden"></p>
+
+        <div class="flex items-center gap-2 mt-3">
+          <button id="btn-forgot" class="flex-1 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white/90 transition-all ghost-btn">
+            忘记密码？
+          </button>
+          <button id="btn-register-toggle" class="flex-1 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white/90 transition-all ghost-btn">
+            注册
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 注册表单（默认隐藏） ── -->
+      <div id="panel-register-form" class="hidden">
+        <p class="text-white/30 text-[11px] font-medium tracking-[0.15em] uppercase mb-5">注册</p>
+
+        <input
+          id="register-username"
+          type="text"
+          placeholder="用户名"
+          class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border-0 transition-all bg-transparent mb-3"
+        />
+        <input
+          id="register-email"
+          type="email"
+          placeholder="邮箱"
+          class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border-0 transition-all bg-transparent mb-3"
+        />
+        <input
+          id="register-password"
+          type="password"
+          placeholder="密码（至少 8 位）"
+          class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none border-0 transition-all bg-transparent mb-5"
+        />
+
+        <button id="btn-register-submit" class="w-full py-2.5 rounded-full text-sm font-bold text-black bg-white hover:bg-white/90 active:scale-[0.97] transition-all">
+          创建账户
+        </button>
+
+        <p id="register-error" class="text-red-300 text-xs mt-2 text-center hidden"></p>
+
+        <div class="flex items-center justify-center mt-3">
+          <button id="btn-login-toggle" class="flex-1 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white/90 transition-all ghost-btn">
+            ← 返回登录
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 已登录：用户状态 ── -->
+      <div id="panel-logged-in" class="hidden">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+               style="background:linear-gradient(135deg,#c084fc,#818cf8)">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div>
+            <p id="display-username" class="text-white font-semibold text-sm leading-tight">用户名</p>
+            <p id="display-email" class="text-white/40 text-xs mt-0.5">@email</p>
+          </div>
+        </div>
+
+        <button class="flex items-center gap-2.5 text-white/60 hover:text-white transition-colors w-full mb-3">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <span class="text-sm" id="notif-text">3 条新通知</span>
+          <span class="ml-auto w-5 h-5 rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center">3</span>
+        </button>
+
+        <button id="btn-logout" class="text-left text-white/35 hover:text-red-400 text-sm transition-colors">
+          退出登录
         </button>
       </div>
-    </header>
-
-    <main class="max-w-4xl mx-auto px-6 py-12">
-      <div class="text-center mb-12">
-        <div class="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold">
-          P4F
-        </div>
-        <h2 class="text-3xl font-bold mb-2">欢迎来到 play4fun 🎉</h2>
-        <p class="text-gray-400">这是你的个人主页。更多功能正在开发中。</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition">
-          <h3 class="text-lg font-semibold mb-2">🔐 SSO 认证</h3>
-          <p class="text-gray-400 text-sm">邮箱注册/登录已就绪，Google OAuth 即将支持。</p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition">
-          <h3 class="text-lg font-semibold mb-2">🌍 Cloudflare</h3>
-          <p class="text-gray-400 text-sm">全球边缘网络部署，毫秒级响应。</p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition">
-          <h3 class="text-lg font-semibold mb-2">🚀 持续扩展</h3>
-          <p class="text-gray-400 text-sm">Oracle Cloud 兼容，功能按路线图迭代。</p>
-        </div>
-      </div>
-    </main>
+    </div>
   </div>
 
   <script src="/app.js"></script>
