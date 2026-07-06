@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+﻿import { Hono } from 'hono';
 import type { AppEnv } from '../types';
 
 export const chatRoutes = new Hono<AppEnv>();
@@ -196,10 +196,10 @@ async function streamVision(
   }
 
   // 本地开发 → REST API
-  const accountId = env.CF_ACCOUNT_ID;
-  const apiToken = env.CF_API_TOKEN;
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !apiToken) {
-    enqueue('error', JSON.stringify({ message: '视觉模型需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。在 .env 中配置。' }));
+    enqueue('error', JSON.stringify({ message: '视觉模型需要 CLOUDFLARE_ACCOUNT_ID 和 CLOUDFLARE_API_TOKEN。在 .env 中配置。' }));
     return;
   }
 
@@ -267,13 +267,13 @@ async function streamLlama(
   }
 
   // 方案 B：本地开发 → Workers AI REST API
-  const accountId = env.CF_ACCOUNT_ID;
-  const apiToken = env.CF_API_TOKEN;
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = env.CLOUDFLARE_API_TOKEN;
 
   if (!accountId || !apiToken) {
     enqueue('error', JSON.stringify({
       message:
-        'Llama 在本地开发需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。\n1. 去 https://dash.cloudflare.com（国内直连）创建 API Token\n2. 在 .env 中配置这两个值\n3. 也可以切换到 DeepSeek 模型',
+        'Llama 在本地开发需要 CLOUDFLARE_ACCOUNT_ID 和 CLOUDFLARE_API_TOKEN。\n1. 去 https://dash.cloudflare.com（国内直连）创建 API Token\n2. 在 .env 中配置这两个值\n3. 也可以切换到 DeepSeek 模型',
     }));
     return;
   }
