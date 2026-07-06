@@ -95,22 +95,17 @@ async function streamVision(
   env: AppEnv['Bindings'],
 ) {
   const modelId = MODELS.vision.id;
-  const messages = [{
-    role: 'user',
-    content: [
-      { type: 'text', text: message },
-      { type: 'image', image: imageBase64 },
-    ],
-  }];
+  // LLaVA 模型使用扁平格式：{ image, prompt }
+  const input = { image: imageBase64, prompt: message };
 
   // Workers 环境 → AI binding
   if (env.AI && typeof env.AI.run === 'function') {
     try {
-      const result = await env.AI.run(modelId, { messages });
-      const text = typeof result === 'string' ? result : result?.response || JSON.stringify(result);
+      const result = await env.AI.run(modelId, input);
+      const text = typeof result === 'string' ? result : result?.response || result?.description || JSON.stringify(result);
       enqueue('text', JSON.stringify({ text }));
     } catch (e: any) {
-      throw new Error(`Vision AI error: ${e.message}`);
+      throw new Error('Vision AI error: ' + e.message);
     }
     return;
   }
@@ -129,18 +124,18 @@ async function streamVision(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiToken}`,
+      'Authorization': 'Bearer ' + apiToken,
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify(input),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Vision API error (${res.status}): ${errText.slice(0, 200)}`);
+    throw new Error('Vision API error (' + res.status + '): ' + errText.slice(0, 200));
   }
 
   const data: any = await res.json();
-  const text = data.result?.response || data.response || JSON.stringify(data);
+  const text = data.result?.response || data.result?.description || data.response || JSON.stringify(data);
   enqueue('text', JSON.stringify({ text }));
 }
 
