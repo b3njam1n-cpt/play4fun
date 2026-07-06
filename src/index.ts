@@ -23,6 +23,7 @@ app.use('*', async (c, next) => {
       ENVIRONMENT: 'development',
       JWT_SECRET: undefined,
       DB: undefined,
+      DEEPSEEK_API_KEY: processEnv.DEEPSEEK_API_KEY,
       GEMINI_API_KEY: processEnv.GEMINI_API_KEY,
       CF_ACCOUNT_ID: processEnv.CF_ACCOUNT_ID,
       CF_API_TOKEN: processEnv.CF_API_TOKEN,

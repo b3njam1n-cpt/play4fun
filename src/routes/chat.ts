@@ -6,16 +6,14 @@ export const chatRoutes = new Hono<AppEnv>();
 // ── 模型配置 ────────────────────────────────────
 
 const MODELS = {
-  gemini: {
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
-    endpoint: (key: string) =>
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${key}`,
+  deepseek: {
+    id: 'deepseek-chat',
+    name: 'DeepSeek',
+    endpoint: 'https://api.deepseek.com/v1/chat/completions',
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct',
     name: 'Llama 3.1 8B',
-    // Workers AI 通过 cf env 绑定或 REST API
     endpoint: (accountId: string) =>
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
   },
@@ -38,9 +36,8 @@ chatRoutes.post('/chat', async (c) => {
     return c.json({ success: false, message: 'message_required' }, 400);
   }
 
-  const modelKey: ModelKey = model === 'gemini' || model === 'llama' ? model : 'gemini';
+  const modelKey = (model === 'deepseek' || model === 'llama') ? model : 'deepseek' as ModelKey;
 
-  // 构建 SSE 流
   const stream = new ReadableStream({
     async start(controller) {
       const enqueue = (type: string, data: string) => {
@@ -48,8 +45,8 @@ chatRoutes.post('/chat', async (c) => {
       };
 
       try {
-        if (modelKey === 'gemini') {
-          await streamGemini(message, enqueue, c.env);
+        if (modelKey === 'deepseek') {
+          await streamDeepSeek(message, enqueue, c.env);
         } else {
           await streamLlama(message, enqueue, c.env);
         }
@@ -73,41 +70,40 @@ chatRoutes.post('/chat', async (c) => {
   });
 });
 
-// ── Gemini 流式（SSE → 我们的 SSE）─────────────
+// ── DeepSeek 流式（OpenAI 兼容 SSE）─────────────
 
-async function streamGemini(
+async function streamDeepSeek(
   message: string,
   enqueue: (type: string, data: string) => void,
   env: AppEnv['Bindings'],
 ) {
-  const apiKey = env.GEMINI_API_KEY;
+  const apiKey = env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     enqueue('error', JSON.stringify({
-      message: 'Gemini API key not configured. Set GEMINI_API_KEY in .env',
+      message: 'DeepSeek API key 未配置。\n1. 去 https://platform.deepseek.com/ 注册（国内直连）\n2. 在 .env 中设置 DEEPSEEK_API_KEY=sk-xxx',
     }));
     return;
   }
 
-  const prompt = `You are a helpful AI assistant. Answer concisely and clearly.\n\nUser: ${message}\n\nAssistant:`;
-
-  const res = await fetch(MODELS.gemini.endpoint(apiKey), {
+  const res = await fetch(MODELS.deepseek.endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      },
+      model: MODELS.deepseek.id,
+      messages: [{ role: 'user', content: message }],
+      stream: true,
+      max_tokens: 2048,
     }),
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`);
+    throw new Error(`DeepSeek API error (${res.status}): ${errText.slice(0, 200)}`);
   }
 
-  // Gemini 返回的也是 SSE 格式
   const reader = res.body?.getReader();
   if (!reader) throw new Error('No response body');
 
@@ -124,16 +120,16 @@ async function streamGemini(
 
     for (const line of lines) {
       if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
+        const data = line.slice(6).trim();
+        if (!data || data === '[DONE]') continue;
         try {
           const parsed = JSON.parse(data);
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            enqueue('text', JSON.stringify({ text }));
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            enqueue('text', JSON.stringify({ text: content }));
           }
         } catch {
-          // 跳过解析失败的行
+          // skip malformed SSE chunks
         }
       }
     }
@@ -147,7 +143,7 @@ async function streamLlama(
   enqueue: (type: string, data: string) => void,
   env: AppEnv['Bindings'],
 ) {
-  // 方案 A：Cloudflare Workers 环境 → 使用 AI binding
+  // 方案 A：Cloudflare Workers 环境 → AI binding
   if (env.AI && typeof env.AI.run === 'function') {
     const stream = (await env.AI.run(MODELS.llama.id, {
       messages: [{ role: 'user', content: message }],
@@ -161,7 +157,6 @@ async function streamLlama(
       const { done, value } = await reader.read();
       if (done) break;
       const text = decoder.decode(value, { stream: true });
-      // Workers AI streaming 返回的是 SSE 格式
       const lines = text.split('\n');
       for (const line of lines) {
         if (line.startsWith('data: ')) {
@@ -173,9 +168,7 @@ async function streamLlama(
             if (content) {
               enqueue('text', JSON.stringify({ text: content }));
             }
-          } catch {
-            // skip
-          }
+          } catch { /* skip */ }
         }
       }
     }
@@ -187,10 +180,9 @@ async function streamLlama(
   const apiToken = env.CF_API_TOKEN;
 
   if (!accountId || !apiToken) {
-    // 本地无 CF 配置时，回退到 Gemini
     enqueue('error', JSON.stringify({
       message:
-        'Llama 在本地开发需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。你可以：\n1. 在 .env 中配置这两个值\n2. 切换到 Gemini 模型（免费且无需额外配置）',
+        'Llama 在本地开发需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。\n1. 去 https://dash.cloudflare.com（国内直连）创建 API Token\n2. 在 .env 中配置这两个值\n3. 也可以切换到 DeepSeek 模型',
     }));
     return;
   }
@@ -212,7 +204,6 @@ async function streamLlama(
     throw new Error(`Workers AI error (${res.status}): ${errText.slice(0, 200)}`);
   }
 
-  // Workers AI REST API 返回的也是 SSE 格式
   const reader = res.body?.getReader();
   if (!reader) throw new Error('No response body');
 
@@ -237,9 +228,7 @@ async function streamLlama(
           if (content) {
             enqueue('text', JSON.stringify({ text: content }));
           }
-        } catch {
-          // skip
-        }
+        } catch { /* skip */ }
       }
     }
   }
@@ -252,7 +241,7 @@ chatRoutes.get('/models', (c) => {
     success: true,
     data: {
       models: [
-        { id: 'gemini', name: MODELS.gemini.name, available: true },
+        { id: 'deepseek', name: MODELS.deepseek.name, available: true },
         { id: 'llama', name: MODELS.llama.name, available: true },
       ],
     },

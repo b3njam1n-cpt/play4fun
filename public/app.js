@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Play4Fun — Frontend Logic v5
 // ============================================================
 console.log('🚀 app.js v5 已加载');
@@ -112,10 +112,10 @@ const modelIcon = document.getElementById('model-icon');
 
 // ── AI 模型状态 ─────────────────────────────────
 const models = {
-  gemini: { name: 'Gemini', icon: '🧠' },
+  deepseek: { name: 'DeepSeek', icon: '🐋' },
   llama: { name: 'Llama', icon: '🦙' },
 };
-let currentModel = 'gemini';
+let currentModel = 'deepseek';
 
 function switchModel() {
   const keys = Object.keys(models);

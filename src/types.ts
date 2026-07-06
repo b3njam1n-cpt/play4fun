@@ -10,7 +10,8 @@ export interface AppEnv {
     DB?: D1Database;         // D1 数据库绑定（生产环境）
     KV?: KVNamespace;        // KV 命名空间绑定
     AI?: any;                // Workers AI binding（生产环境）
-    GEMINI_API_KEY?: string; // Gemini API key
+    DEEPSEEK_API_KEY?: string;  // DeepSeek API key
+    GEMINI_API_KEY?: string; // Gemini API key（可选）
     CF_ACCOUNT_ID?: string;  // Cloudflare Account ID（本地开发用）
     CF_API_TOKEN?: string;   // Cloudflare API Token（本地开发用）
   };
