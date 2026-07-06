@@ -112,10 +112,10 @@ const modelIcon = document.getElementById('model-icon');
 
 // ── AI 模型状态 ─────────────────────────────────
 const models = {
-  deepseek: { name: 'DeepSeek', icon: '🐋' },
+  // deepseek: { name: 'DeepSeek', icon: '🐋' },  // 暂时禁用（API 消费）
   llama: { name: 'Llama', icon: '🦙' },
 };
-let currentModel = 'deepseek';
+let currentModel = 'llama';
 
 function switchModel() {
   const keys = Object.keys(models);
