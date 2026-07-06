@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+﻿import { Hono } from 'hono';
 import type { AppEnv } from '../types';
 
 export const chatRoutes = new Hono<AppEnv>();
@@ -10,9 +10,9 @@ export const chatRoutes = new Hono<AppEnv>();
 
 const MODELS = {
   gemini: {
-    id: 'gemini-flash-latest',
-    name: 'Gemini Flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse',
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
@@ -119,18 +119,32 @@ async function streamGemini(
     { role: 'user', parts: [{ text: langHint + '\n\n' + message }] },
   ];
 
-  const res = await fetch(MODELS.gemini.endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-    body: JSON.stringify({
-      contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-    }),
+  const body = JSON.stringify({
+    contents,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error('Gemini API error (' + res.status + '): ' + errText.slice(0, 200));
+  // 最多重试 3 次，应对 503/429 等临时错误
+  let res: Response | undefined;
+  let lastError = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+    res = await fetch(MODELS.gemini.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-goog-api-key': apiKey,
+      },
+      body,
+      cf: { requestPriority: 'weight=192' } as any,
+    });
+    if (res.ok || (res.status !== 503 && res.status !== 400)) break;
+    lastError = '503';
+  }
+
+  if (!res || !res.ok) {
+    const errText = res ? await res.text() : lastError;
+    throw new Error('Gemini API error (' + (res?.status || '???') + '): ' + errText.slice(0, 200));
   }
 
   const reader = res.body?.getReader();
@@ -196,10 +210,10 @@ async function streamVision(
   }
 
   // 本地开发 → REST API
-  const accountId = env.CF_ACCOUNT_ID;
-  const apiToken = env.CF_API_TOKEN;
+  const accountId = env.CF_LOCAL_ACCOUNT_ID;
+  const apiToken = env.CF_LOCAL_API_TOKEN;
   if (!accountId || !apiToken) {
-    enqueue('error', JSON.stringify({ message: '视觉模型需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。在 .env 中配置。' }));
+    enqueue('error', JSON.stringify({ message: '视觉模型需要 CF_LOCAL_ACCOUNT_ID 和 CF_LOCAL_API_TOKEN。在 .env 中配置。' }));
     return;
   }
 
@@ -267,13 +281,13 @@ async function streamLlama(
   }
 
   // 方案 B：本地开发 → Workers AI REST API
-  const accountId = env.CF_ACCOUNT_ID;
-  const apiToken = env.CF_API_TOKEN;
+  const accountId = env.CF_LOCAL_ACCOUNT_ID;
+  const apiToken = env.CF_LOCAL_API_TOKEN;
 
   if (!accountId || !apiToken) {
     enqueue('error', JSON.stringify({
       message:
-        'Llama 在本地开发需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。\n1. 去 https://dash.cloudflare.com（国内直连）创建 API Token\n2. 在 .env 中配置这两个值\n3. 也可以切换到 DeepSeek 模型',
+        'Llama 在本地开发需要 CF_LOCAL_ACCOUNT_ID 和 CF_LOCAL_API_TOKEN。\n1. 去 https://dash.cloudflare.com（国内直连）创建 API Token\n2. 在 .env 中配置这两个值\n3. 也可以切换到 DeepSeek 模型',
     }));
     return;
   }

@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+﻿import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chat';
@@ -25,8 +25,8 @@ app.use('*', async (c, next) => {
       DB: undefined,
       DEEPSEEK_API_KEY: processEnv.DEEPSEEK_API_KEY,
       GEMINI_API_KEY: processEnv.GEMINI_API_KEY,
-      CF_ACCOUNT_ID: processEnv.CF_ACCOUNT_ID,
-      CF_API_TOKEN: processEnv.CF_API_TOKEN,
+      CF_LOCAL_ACCOUNT_ID: processEnv.CF_LOCAL_ACCOUNT_ID,
+      CF_LOCAL_API_TOKEN: processEnv.CF_LOCAL_API_TOKEN,
       AI: undefined,
     };
   }
