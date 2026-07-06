@@ -51,3 +51,31 @@
 - 升级 Node.js 到 22+ 以支持 Wrangler 本地开发
 
 ---
+
+## 2026-07-06 (笔记本) — fun-3 登录后主页 + 本地环境
+
+**完成内容**：
+- 创建登录后主页视图：复用 Unsplash 背景，左上角渐变色欢迎语「欢迎 {用户名} 来我们的 playground」
+- 搭设本地开发环境：`npx tsx server.js` 启动（:3000），不依赖 Wrangler
+- 启动时自动种子测试用户 `test@example.com / test1234`
+- 中英文双语支持主页文案
+- 修复 Node.js 环境下 `c.env` 为 undefined 的问题（`src/index.ts` 添加默认 Bindings 中间件）
+- 安装 `@hono/node-server` + `tsx` 作为 devDependencies
+
+**关键决策**：
+- 本地开发用 `npx tsx server.js` 而非 `npm run dev`（Wrangler 需要 Node ≥22，当前 19.9）
+- `server.js` 直接 import TypeScript 源文件（tsx 解析），避免编译步骤
+- `c.env` 通过中间件注入默认值，不影响 Cloudflare Workers 生产环境
+- 测试用户种子直接写在 `server.js` 中，每次重启自动重建（内存存储，重启即失）
+
+**踩坑记录**：
+- `c.env` 在 Node.js 中为 undefined，`c.env.DB` 直接抛 TypeError。必须用中间件在请求时注入默认 env
+- `@hono/node-server` v2.0.8 要求 Node ≥20，当前 19.9 虽报警告但实际可用
+- Hono 的 `c.json()` 需要 StatusCode 参数，不能直接传数字（用 `{ status } as any` 绕过类型检查）
+
+**下一步**：
+- 完善主页内容（目前只有欢迎语，其余待用户定义）
+- 考虑主页是否需要导航栏 / 侧边栏 / 功能模块
+- 合并 fun-2 → master → fun-3 → master
+
+---
