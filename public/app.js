@@ -312,7 +312,7 @@ let isAiStreaming = false;
 
 function openAiTerminal(query) {
   if (!aiTerminal || !aiTerminalContent) return;
-  aiTerminal.classList.remove('hidden');
+  aiTerminal.style.display = 'flex';
   // 清空之前的对话
   aiTerminalContent.innerHTML = '';
   // 添加用户消息
@@ -326,8 +326,8 @@ function openAiTerminal(query) {
 }
 
 function closeAiTerminal() {
-  aiTerminal?.classList.add('hidden');
-  aiTerminalContent.innerHTML = '';
+  if (aiTerminal) aiTerminal.style.display = 'none';
+  if (aiTerminalContent) aiTerminalContent.innerHTML = '';
   if (aiTerminalInput) aiTerminalInput.value = '';
   isAiStreaming = false;
 }
@@ -342,7 +342,7 @@ aiTerminal?.addEventListener('click', (e) => {
 
 // Esc 关闭
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && aiTerminal && !aiTerminal.classList.contains('hidden')) {
+  if (e.key === 'Escape' && aiTerminal && aiTerminal.style.display !== 'none') {
     closeAiTerminal();
   }
 });
