@@ -16,10 +16,10 @@ const MODELS = {
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
   },
   vision: {
-    id: '@cf/llava-hf/llava-1.5-7b-hf',
-    name: 'LLaVA 1.5 (视觉)',
+    id: '@cf/meta/llama-3.2-11b-vision-instruct',
+    name: 'Llama 3.2 Vision',
     endpoint: (accountId: string) =>
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.2-11b-vision-instruct`,
   },
 } as const;
 
@@ -109,7 +109,16 @@ async function streamVision(
 ) {
   const modelId = MODELS.vision.id;
   const imageArray = base64ToBytes(imageBase64);
-  const input = { image: imageArray, prompt: message };
+  // Llama 3.2 Vision 使用 messages 格式，image 为字节数组
+  const input = {
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: message },
+        { type: 'image', image: imageArray },
+      ],
+    }],
+  };
 
   // Workers 环境 → AI binding
   if (env.AI && typeof env.AI.run === 'function') {
@@ -127,18 +136,13 @@ async function streamVision(
   const accountId = env.CF_ACCOUNT_ID;
   const apiToken = env.CF_API_TOKEN;
   if (!accountId || !apiToken) {
-    enqueue('error', JSON.stringify({
-      message: '视觉模型需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。在 .env 中配置。',
-    }));
+    enqueue('error', JSON.stringify({ message: '视觉模型需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。在 .env 中配置。' }));
     return;
   }
 
   const res = await fetch(MODELS.vision.endpoint(accountId), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiToken,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiToken },
     body: JSON.stringify(input),
   });
 
