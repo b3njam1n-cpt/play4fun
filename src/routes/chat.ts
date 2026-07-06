@@ -61,7 +61,12 @@ chatRoutes.post('/chat', async (c) => {
         if (hasImage) {
           await streamVision(prompt, image!, history, enqueue, c.env);
         } else if (modelKey === 'gemini') {
-          await streamGemini(prompt, history, enqueue, c.env);
+          try {
+            await streamGemini(prompt, history, enqueue, c.env);
+          } catch {
+            enqueue('text', JSON.stringify({ text: '⚠️ Gemini 暂时不可用，已自动切换到 Llama...\n\n' }));
+            await streamLlama(prompt, history, enqueue, c.env);
+          }
         } else {
           await streamLlama(prompt, history, enqueue, c.env);
         }
