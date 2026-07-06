@@ -3,12 +3,30 @@
 // 运行命令：npx tsx server.js
 // ============================================================
 
-import { serve } from '@hono/node-server';
 import { readFileSync, existsSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { serve } from '@hono/node-server';
 import bcrypt from 'bcryptjs';
 import app from './src/index.ts';
 import { localDB } from './src/db/local-store.ts';
+
+// ── 加载 .env 文件（Wrangler 自动，Node.js 手动）───
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = resolve(__dirname, '.env');
+try {
+  const envContent = readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (!process.env[key]) process.env[key] = value;
+  }
+  console.log('📄 .env 文件已加载');
+} catch { console.log('⚠️  未找到 .env 文件'); }
 
 // ── 静态文件服务 ────────────────────────────────
 const MIME = {
