@@ -25,8 +25,8 @@ app.use('*', async (c, next) => {
       DB: undefined,
       DEEPSEEK_API_KEY: processEnv.DEEPSEEK_API_KEY,
       GEMINI_API_KEY: processEnv.GEMINI_API_KEY,
-      CLOUDFLARE_ACCOUNT_ID: processEnv.CLOUDFLARE_ACCOUNT_ID,
-      CLOUDFLARE_API_TOKEN: processEnv.CLOUDFLARE_API_TOKEN,
+      CF_LOCAL_ACCOUNT_ID: processEnv.CF_LOCAL_ACCOUNT_ID,
+      CF_LOCAL_API_TOKEN: processEnv.CF_LOCAL_API_TOKEN,
       AI: undefined,
     };
   }
