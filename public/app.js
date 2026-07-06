@@ -87,6 +87,7 @@ const aiImagePreview = document.getElementById('ai-image-preview');
 const aiImagePreviewImg = document.getElementById('ai-image-preview-img');
 const aiImageRemove = document.getElementById('ai-image-remove');
 let aiImageBase64 = null;
+let aiHistory = []; // 对话历史 [{role, content}]
 
 // ── 模型 ────────────────────────────────────────
 const models = {
@@ -241,6 +242,7 @@ function openAiTerminal(query) {
   if (!aiTerminal || !aiTerminalContent) return;
   aiTerminal.style.display = 'flex';
   aiTerminalContent.innerHTML = '';
+  aiHistory = [];
   appendAiMessage('user', query);
   const aiMsgEl = appendAiMessage('ai', '', true);
   sendAiChat(query, aiMsgEl);
@@ -251,6 +253,7 @@ function closeAiTerminal() {
   if (aiTerminal) aiTerminal.style.display = 'none';
   if (aiTerminalContent) aiTerminalContent.innerHTML = '';
   if (aiTerminalInput) aiTerminalInput.value = '';
+  aiHistory = [];
   isAiStreaming = false;
 }
 
@@ -263,13 +266,25 @@ document.addEventListener('keydown', (e) => {
 // ── 图片处理 ────────────────────────────────────
 function handleImageFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    aiImageBase64 = reader.result.split(',')[1];
-    if (aiImagePreviewImg) aiImagePreviewImg.src = reader.result;
+  // 先用 canvas 缩小图片，防止超模型 token 限制
+  const img = new Image();
+  img.onload = () => {
+    const MAX = 1024;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      const ratio = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/png');
+    aiImageBase64 = dataUrl.split(',')[1];
+    if (aiImagePreviewImg) aiImagePreviewImg.src = dataUrl;
     if (aiImagePreview) aiImagePreview.classList.remove('hidden');
   };
-  reader.readAsDataURL(file);
+  img.src = URL.createObjectURL(file);
 }
 function clearImage() {
   aiImageBase64 = null;
@@ -328,10 +343,11 @@ async function sendAiChat(message, targetEl) {
   isAiStreaming = true;
   let fullText = '';
   try {
+    aiHistory.push({ role: 'user', content: message });
     const res = await fetch(CHAT_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, model: currentModel, image: aiImageBase64 }),
+      body: JSON.stringify({ message, model: currentModel, image: aiImageBase64, history: aiHistory.slice(0, -1) }),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     clearImage();
@@ -373,6 +389,7 @@ async function sendAiChat(message, targetEl) {
     if (targetEl) { targetEl.textContent = tl('aiError'); targetEl.classList.remove('ai-terminal-cursor'); targetEl.classList.add('text-red-400'); }
   }
   if (targetEl) targetEl.classList.remove('ai-terminal-cursor');
+  if (fullText) aiHistory.push({ role: 'assistant', content: fullText });
   isAiStreaming = false;
 }
 
