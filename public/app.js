@@ -1,7 +1,7 @@
 // ============================================================
 // Play4Fun — Frontend Logic (Figma Design)
 // ============================================================
-console.log('🚀 app.js v2 已加载 — addEventListener 版本');
+console.log('🚀 app.js v3 已加载');
 
 const API_BASE = '/auth';
 
@@ -21,6 +21,8 @@ const t = {
     passPlaceholderReg: '密码（至少 8 位）',
     backToLogin: '← 返回登录',
     createAccount: '创建账户',
+    loggingIn: '登录中...',
+    registering: '注册中...',
   },
   en: {
     searchPlaceholder: 'Search anything...',
@@ -36,6 +38,8 @@ const t = {
     passPlaceholderReg: 'Password (min 8 chars)',
     backToLogin: '← Back to login',
     createAccount: 'Create Account',
+    loggingIn: 'Signing in...',
+    registering: 'Registering...',
   },
 };
 
@@ -43,13 +47,10 @@ let lang = 'zh';
 function tl(key) { return t[lang][key]; }
 
 // ── DOM 元素 ────────────────────────────────────
-const searchWrapper = document.getElementById('search-wrapper');
-const searchBar = document.getElementById('search-bar');
 const searchInput = document.getElementById('search-input');
 const searchClear = document.getElementById('search-clear');
+const searchBar = document.getElementById('search-bar');
 
-// 手机端搜索栏
-const searchBarMobile = document.getElementById('search-bar-mobile');
 const searchInputMobile = document.getElementById('search-input-mobile');
 const searchClearMobile = document.getElementById('search-clear-mobile');
 
@@ -76,6 +77,22 @@ const displayUsername = document.getElementById('display-username');
 const displayEmail = document.getElementById('display-email');
 const notifText = document.getElementById('notif-text');
 
+// ── 按钮防抖工具 ────────────────────────────────
+function lockButton(btn, text) {
+  btn.disabled = true;
+  btn.dataset.originalText = btn.textContent;
+  btn.textContent = text;
+  btn.style.opacity = '0.6';
+  btn.style.cursor = 'not-allowed';
+}
+
+function unlockButton(btn) {
+  btn.disabled = false;
+  btn.textContent = btn.dataset.originalText || btn.textContent;
+  btn.style.opacity = '';
+  btn.style.cursor = '';
+}
+
 // ── 搜索栏（桌面端）─────────────────────────────
 searchInput?.addEventListener('focus', () => searchBar?.classList.add('focused'));
 searchInput?.addEventListener('blur', () => searchBar?.classList.remove('focused'));
@@ -101,21 +118,13 @@ searchClearMobile?.addEventListener('mousedown', (e) => {
 });
 
 // ── 语言切换 ────────────────────────────────────
-btnZh.addEventListener('click', () => {
-  console.log('🖱️ 点击了中文按钮');
-  setLang('zh');
-});
-btnEn.addEventListener('click', () => {
-  console.log('🖱️ 点击了 EN 按钮');
-  setLang('en');
-});
-console.log('✅ 语言切换监听器已绑定: btnZh, btnEn');
+btnZh.addEventListener('click', () => setLang('zh'));
+btnEn.addEventListener('click', () => setLang('en'));
 
 function setLang(l) {
   if (lang === l) return;
   lang = l;
 
-  // 用 classList 切换，不覆盖 Tailwind 类
   if (l === 'zh') {
     btnZh.classList.add('active');
     btnEn.classList.remove('active');
@@ -182,6 +191,8 @@ async function handleLogin() {
     return;
   }
 
+  lockButton(btnLogin, tl('loggingIn'));
+
   try {
     const res = await fetch(`${API_BASE}/login`, {
       method: 'POST',
@@ -193,12 +204,15 @@ async function handleLogin() {
     if (!data.success) {
       const msg = lang === 'zh' ? '邮箱或密码错误' : 'Invalid email or password';
       showError(loginError, msg);
+      unlockButton(btnLogin);
       return;
     }
+    // 统一格式：{ token, user: { id, email, display_name, ... } }
     showLoggedIn(data.data.user);
   } catch {
     showError(loginError, lang === 'zh' ? '网络错误' : 'Network error');
   }
+  unlockButton(btnLogin);
 }
 
 // ── 注册 ─────────────────────────────────────────
@@ -209,6 +223,7 @@ registerPassword.addEventListener('keydown', (e) => {
 
 async function handleRegister() {
   registerError.classList.add('hidden');
+  const displayName = registerUsername.value.trim();
   const email = registerEmail.value.trim();
   const password = registerPassword.value;
 
@@ -221,12 +236,17 @@ async function handleRegister() {
     return;
   }
 
+  lockButton(btnRegisterSubmit, tl('registering'));
+
   try {
+    const body = { email, password };
+    if (displayName) body.display_name = displayName;
+
     const res = await fetch(`${API_BASE}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (!data.success) {
@@ -235,12 +255,15 @@ async function handleRegister() {
         email_invalid: lang === 'zh' ? '邮箱格式无效' : 'Invalid email format',
       };
       showError(registerError, messages[data.error?.code] || data.message);
+      unlockButton(btnRegisterSubmit);
       return;
     }
-    showLoggedIn(data.data);
+    // 统一格式：{ token, user: { id, email, display_name, ... } }
+    showLoggedIn(data.data.user);
   } catch {
     showError(registerError, lang === 'zh' ? '网络错误' : 'Network error');
   }
+  unlockButton(btnRegisterSubmit);
 }
 
 // ── 已登录状态 ──────────────────────────────────
@@ -248,10 +271,13 @@ function showLoggedIn(user) {
   panelLoginForm.classList.add('hidden');
   panelRegisterForm.classList.add('hidden');
   panelLoggedIn.classList.remove('hidden');
-  displayUsername.textContent = user.email?.split('@')[0] || user.email;
+  // 优先使用 display_name，其次使用邮箱前缀
+  displayUsername.textContent = user.display_name || user.email?.split('@')[0] || user.email;
   displayEmail.textContent = user.email;
+  // 清空表单
   loginUsername.value = '';
   loginPassword.value = '';
+  registerUsername.value = '';
   registerEmail.value = '';
   registerPassword.value = '';
 }
@@ -279,6 +305,7 @@ async function init() {
     if (res.ok) {
       const data = await res.json();
       if (data.success) {
+        // GET /me 返回 user 对象（与 userResponse 一致）
         showLoggedIn(data.data);
         return;
       }

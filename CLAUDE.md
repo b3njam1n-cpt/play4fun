@@ -21,15 +21,20 @@
 | `src/index.ts` | Worker 入口 |
 | `src/routes/auth.ts` | 认证 API |
 | `src/middleware/auth.ts` | JWT 中间件 |
+| `src/utils/constants.ts` | JWT / Cookie / bcrypt 共享常量 |
+| `src/utils/response.ts` | 统一 API 响应格式 |
 | `src/db/schema.sql` | D1 建表 |
-| `src/db/local-store.ts` | 本地内存数据库（D1 不可用时的回退） |
+| `src/db/local-store.ts` | 本地内存数据库（含 User + Session） |
 | `public/index.html` | 前端主页面 |
+| `public/app.js` | 前端逻辑（当前 v3） |
+| `test-smoke.mjs` | 本地冒烟测试（Node.js，不依赖 Wrangler） |
 | `docs/` | **所有设计文档、API 文档、路线图** |
 
 ## 当前进程
 
-- ✅ Phase 1 MVP 搭建完成（注册/登录/登出/获取用户 + 前端页面）
-- ⬜ 下一步：wrangler login → 创建 D1 → 部署上线
+- ✅ Phase 1 MVP 核心完成（注册/登录/登出/获取用户 + JWT 中间件 + Session 管理）
+- ✅ fun-2 分支：修复 7 个注册/登录问题（响应格式统一、display_name、Session、常量提取、按钮防抖）
+- ⬜ 下一步：合并 fun-2 → master → wrangler login → 创建 D1 → 部署上线
 - 📋 完整路线图见 `docs/04-roadmap.md`
 
 ## 开发命令
@@ -47,6 +52,10 @@ npm run deploy   # 部署到 Cloudflare
 | 日期 | 决策 | 原因 |
 |------|------|------|
 | 2026-07-06 | 建立多设备 AI 协作体系 | 台式机+笔记本双设备开发，需要上下文传递机制 |
+| 2026-07-06 | fun-2: 统一注册/登录响应为 `{ token, user }` | 之前注册返回 `{ id, email }` 登录返回 `{ token, user: {...} }`，不一致 |
+| 2026-07-06 | fun-2: JWT 增加 jti 声明 + Session 表写入 | 为服务端登出和多设备会话管理打基础 |
+| 2026-07-06 | fun-2: 注册支持 display_name（可选） | 前端已有用户名输入框但一直未使用 |
+| 2026-07-06 | fun-2: 提取 `src/utils/constants.ts` 共享常量 | 消除 JWT_SECRET 回退值在两处硬编码的重复 |
 
 ## 重要规则
 
