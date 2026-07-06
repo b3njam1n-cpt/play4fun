@@ -5,12 +5,10 @@ export const chatRoutes = new Hono<AppEnv>();
 
 // ── 模型配置 ────────────────────────────────────
 
+// deepseek 暂时禁用（API 消费），需要时取消注释即可恢复
+// const MODELS_DEEPSEEK = { ... };
+
 const MODELS = {
-  deepseek: {
-    id: 'deepseek-chat',
-    name: 'DeepSeek',
-    endpoint: 'https://api.deepseek.com/v1/chat/completions',
-  },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct',
     name: 'Llama 3.1 8B',
@@ -36,7 +34,7 @@ chatRoutes.post('/chat', async (c) => {
     return c.json({ success: false, message: 'message_required' }, 400);
   }
 
-  const modelKey = (model === 'deepseek' || model === 'llama') ? model : 'deepseek' as ModelKey;
+  const modelKey: ModelKey = 'llama';
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -45,14 +43,10 @@ chatRoutes.post('/chat', async (c) => {
       };
 
       try {
-        if (modelKey === 'deepseek') {
-          await streamDeepSeek(message, enqueue, c.env);
-        } else {
-          await streamLlama(message, enqueue, c.env);
-        }
+        await streamLlama(message, enqueue, c.env);
         enqueue('done', '{}');
       } catch (e: any) {
-        console.error(`[chat:${modelKey}] error:`, e);
+        console.error(`[chat:llama] error:`, e);
         enqueue('error', JSON.stringify({ message: e.message || 'ai_error' }));
       } finally {
         controller.close();
@@ -70,71 +64,14 @@ chatRoutes.post('/chat', async (c) => {
   });
 });
 
-// ── DeepSeek 流式（OpenAI 兼容 SSE）─────────────
+// ── DeepSeek 流式（暂时禁用，API 消费）─────────
+// 需要恢复时取消注释即可
 
-async function streamDeepSeek(
-  message: string,
-  enqueue: (type: string, data: string) => void,
-  env: AppEnv['Bindings'],
-) {
-  const apiKey = env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    enqueue('error', JSON.stringify({
-      message: 'DeepSeek API key 未配置。\n1. 去 https://platform.deepseek.com/ 注册（国内直连）\n2. 在 .env 中设置 DEEPSEEK_API_KEY=sk-xxx',
-    }));
-    return;
-  }
-
-  const res = await fetch(MODELS.deepseek.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: MODELS.deepseek.id,
-      messages: [{ role: 'user', content: message }],
-      stream: true,
-      max_tokens: 2048,
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`DeepSeek API error (${res.status}): ${errText.slice(0, 200)}`);
-  }
-
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error('No response body');
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6).trim();
-        if (!data || data === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            enqueue('text', JSON.stringify({ text: content }));
-          }
-        } catch {
-          // skip malformed SSE chunks
-        }
-      }
-    }
-  }
-}
+// async function streamDeepSeek(
+//   message: string,
+//   enqueue: (type: string, data: string) => void,
+//   env: AppEnv['Bindings'],
+// ) { ... }
 
 // ── Llama 流式（Workers AI → SSE）───────────────
 
@@ -241,7 +178,7 @@ chatRoutes.get('/models', (c) => {
     success: true,
     data: {
       models: [
-        { id: 'deepseek', name: MODELS.deepseek.name, available: true },
+        // { id: 'deepseek', name: 'DeepSeek', available: false },  // 暂时禁用
         { id: 'llama', name: MODELS.llama.name, available: true },
       ],
     },
