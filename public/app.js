@@ -162,7 +162,6 @@ searchClear?.addEventListener('mousedown', (e) => {
 // Enter → AI Chat
 searchInput?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && searchInput.value.trim()) {
-    console.log('⌨️  Search Enter pressed, value:', searchInput.value.trim());
     openAiTerminal(searchInput.value.trim());
     searchInput.value = '';
     searchClear?.classList.add('hidden');
@@ -312,14 +311,8 @@ document.getElementById('btn-forgot').addEventListener('click', () => {
 let isAiStreaming = false;
 
 function openAiTerminal(query) {
-  console.log('🔔 openAiTerminal called, query:', query);
-  console.log('   aiTerminal:', aiTerminal, 'aiTerminalContent:', aiTerminalContent);
-  if (!aiTerminal || !aiTerminalContent) {
-    console.error('❌ aiTerminal or aiTerminalContent is null!');
-    return;
-  }
+  if (!aiTerminal || !aiTerminalContent) return;
   aiTerminal.style.display = 'flex';
-  console.log('   style.display set to:', aiTerminal.style.display);
   // 清空之前的对话
   aiTerminalContent.innerHTML = '';
   // 添加用户消息
