@@ -10,10 +10,10 @@ export const chatRoutes = new Hono<AppEnv>();
 
 const MODELS = {
   llama: {
-    id: '@cf/meta/llama-3.1-8b-instruct',
+    id: '@cf/meta/llama-3.1-8b-instruct-fp8',
     name: 'Llama 3.1 8B',
     endpoint: (accountId: string) =>
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct-fp8`,
   },
   vision: {
     id: '@cf/meta/llama-3.2-11b-vision-instruct',
