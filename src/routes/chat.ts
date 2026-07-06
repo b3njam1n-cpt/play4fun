@@ -9,6 +9,11 @@ export const chatRoutes = new Hono<AppEnv>();
 // const MODELS_DEEPSEEK = { ... };
 
 const MODELS = {
+  gemini: {
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
+  },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
     name: 'Llama 3.1 8B',
@@ -43,7 +48,8 @@ chatRoutes.post('/chat', async (c) => {
     return c.json({ success: false, message: 'message_required' }, 400);
   }
 
-  const modelKey: ModelKey = hasImage ? 'vision' : 'llama';
+  const modelKey: ModelKey = hasImage ? 'vision'
+    : (model === 'gemini' || model === 'llama' ? model : 'gemini') as ModelKey;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -54,12 +60,14 @@ chatRoutes.post('/chat', async (c) => {
       try {
         if (hasImage) {
           await streamVision(prompt, image!, history, enqueue, c.env);
+        } else if (modelKey === 'gemini') {
+          await streamGemini(prompt, history, enqueue, c.env);
         } else {
           await streamLlama(prompt, history, enqueue, c.env);
         }
         enqueue('done', '{}');
       } catch (e: any) {
-        console.error(`[chat:llama] error:`, e);
+        console.error('[chat:' + modelKey + '] error:', e);
         enqueue('error', JSON.stringify({ message: e.message || 'ai_error' }));
       } finally {
         controller.close();
@@ -86,7 +94,71 @@ chatRoutes.post('/chat', async (c) => {
 //   env: AppEnv['Bindings'],
 // ) { ... }
 
-// ── Vision 流式（LLaVA，图片分析）───────────────
+// ── Gemini 流式（免费，中文强）───────────────────
+
+async function streamGemini(
+  message: string,
+  history: {role:string;content:string}[] | undefined,
+  enqueue: (type: string, data: string) => void,
+  env: AppEnv['Bindings'],
+) {
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey) {
+    enqueue('error', JSON.stringify({
+      message: 'Gemini API key 未配置。在 .env 中设置 GEMINI_API_KEY。',
+    }));
+    return;
+  }
+
+  const langHint = '【重要：请用和提问相同的语言回复。】';
+  const contents = [
+    ...(history || []).slice(-20).map(h => ({
+      role: h.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: h.content }],
+    })),
+    { role: 'user', parts: [{ text: langHint + '\n\n' + message }] },
+  ];
+
+  const res = await fetch(MODELS.gemini.endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+    body: JSON.stringify({
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error('Gemini API error (' + res.status + '): ' + errText.slice(0, 200));
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response body');
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) enqueue('text', JSON.stringify({ text }));
+        } catch { /* skip */ }
+      }
+    }
+  }
+}
+
+// ── Vision 流式（Llama 3.2 Vision，图片分析）─────
 
 async function streamVision(
   message: string,
@@ -260,7 +332,7 @@ chatRoutes.get('/models', (c) => {
     success: true,
     data: {
       models: [
-        // { id: 'deepseek', name: 'DeepSeek', available: false },  // 暂时禁用
+        { id: 'gemini', name: MODELS.gemini.name, available: true },
         { id: 'llama', name: MODELS.llama.name, available: true },
       ],
     },

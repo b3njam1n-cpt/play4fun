@@ -91,9 +91,10 @@ let aiHistory = []; // 对话历史 [{role, content}]
 
 // ── 模型 ────────────────────────────────────────
 const models = {
+  gemini: { name: 'Gemini', icon: '🧠' },
   llama: { name: 'Llama', icon: '🦙' },
 };
-let currentModel = 'llama';
+let currentModel = 'gemini';
 
 function switchModel() {
   const keys = Object.keys(models);
