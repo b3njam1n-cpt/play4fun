@@ -13,6 +13,18 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// 本地开发环境：注入默认 Bindings（Cloudflare Workers 由平台自动注入）
+app.use('*', async (c, next) => {
+  if (!c.env) {
+    (c as any).env = {
+      ENVIRONMENT: 'development',
+      JWT_SECRET: undefined, // 走 constants.ts 中的 fallback
+      DB: undefined,         // 走 localDB 内存回退
+    };
+  }
+  await next();
+});
+
 // ── API 路由 ────────────────────────────────────
 app.route('/auth', authRoutes);
 

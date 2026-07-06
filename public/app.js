@@ -1,7 +1,7 @@
 // ============================================================
-// Play4Fun — Frontend Logic (Figma Design)
+// Play4Fun — Frontend Logic v4
 // ============================================================
-console.log('🚀 app.js v3 已加载');
+console.log('🚀 app.js v4 已加载');
 
 const API_BASE = '/auth';
 
@@ -23,6 +23,9 @@ const t = {
     createAccount: '创建账户',
     loggingIn: '登录中...',
     registering: '注册中...',
+    welcomePrefix: '欢迎',
+    welcomeSuffix: '来我们的 playground',
+    homepageSubtitle: '这里什么都有，也什么都没有——剩下的等待你来定义。',
   },
   en: {
     searchPlaceholder: 'Search anything...',
@@ -40,6 +43,9 @@ const t = {
     createAccount: 'Create Account',
     loggingIn: 'Signing in...',
     registering: 'Registering...',
+    welcomePrefix: 'Welcome',
+    welcomeSuffix: 'to our playground',
+    homepageSubtitle: 'Everything here, and nothing here — the rest is up to you.',
   },
 };
 
@@ -47,6 +53,13 @@ let lang = 'zh';
 function tl(key) { return t[lang][key]; }
 
 // ── DOM 元素 ────────────────────────────────────
+const heroSection = document.getElementById('hero-section');
+const homepage = document.getElementById('homepage');
+const welcomeName = document.getElementById('welcome-name');
+const welcomePrefix = document.getElementById('welcome-prefix');
+const welcomeSuffix = document.getElementById('welcome-suffix');
+const homepageSubtitle = document.getElementById('homepage-subtitle');
+
 const searchInput = document.getElementById('search-input');
 const searchClear = document.getElementById('search-clear');
 const searchBar = document.getElementById('search-bar');
@@ -61,6 +74,7 @@ const panelLoginForm = document.getElementById('panel-login-form');
 const panelRegisterForm = document.getElementById('panel-register-form');
 const panelLoggedIn = document.getElementById('panel-logged-in');
 const panelLabel = document.getElementById('panel-label');
+const loginPanel = document.getElementById('login-panel');
 
 const loginUsername = document.getElementById('login-username');
 const loginPassword = document.getElementById('login-password');
@@ -156,7 +170,13 @@ function updateTexts() {
   document.getElementById('btn-login-toggle').textContent = tl('backToLogin');
   document.getElementById('btn-logout').textContent = tl('signOut');
   notifText.textContent = tl('notif');
-  if (panelRegisterForm.classList.contains('hidden')) {
+
+  // 主页文案
+  if (welcomePrefix) welcomePrefix.textContent = tl('welcomePrefix');
+  if (welcomeSuffix) welcomeSuffix.textContent = tl('welcomeSuffix');
+  if (homepageSubtitle) homepageSubtitle.textContent = tl('homepageSubtitle');
+
+  if (panelRegisterForm.classList.contains('hidden') && panelLoginForm.classList.contains('hidden') === false) {
     panelLabel.textContent = tl('loginLabel');
   }
 }
@@ -207,7 +227,6 @@ async function handleLogin() {
       unlockButton(btnLogin);
       return;
     }
-    // 统一格式：{ token, user: { id, email, display_name, ... } }
     showLoggedIn(data.data.user);
   } catch {
     showError(loginError, lang === 'zh' ? '网络错误' : 'Network error');
@@ -258,7 +277,6 @@ async function handleRegister() {
       unlockButton(btnRegisterSubmit);
       return;
     }
-    // 统一格式：{ token, user: { id, email, display_name, ... } }
     showLoggedIn(data.data.user);
   } catch {
     showError(registerError, lang === 'zh' ? '网络错误' : 'Network error');
@@ -266,14 +284,27 @@ async function handleRegister() {
   unlockButton(btnRegisterSubmit);
 }
 
-// ── 已登录状态 ──────────────────────────────────
+// ── 已登录 → 显示主页 ──────────────────────────
 function showLoggedIn(user) {
+  // 隐藏未登录元素
+  heroSection?.classList.add('hidden');
   panelLoginForm.classList.add('hidden');
   panelRegisterForm.classList.add('hidden');
-  panelLoggedIn.classList.remove('hidden');
-  // 优先使用 display_name，其次使用邮箱前缀
-  displayUsername.textContent = user.display_name || user.email?.split('@')[0] || user.email;
+  panelLoggedIn.classList.add('hidden');
+  // 隐藏整个登录面板容器
+  if (loginPanel) loginPanel.classList.add('hidden');
+
+  // 显示主页
+  homepage?.classList.remove('hidden');
+
+  // 设置欢迎语
+  const name = user.display_name || user.email?.split('@')[0] || user.email;
+  if (welcomeName) welcomeName.textContent = name;
+
+  // 更新右侧登录面板中的用户信息（保留以备后用）
+  displayUsername.textContent = name;
   displayEmail.textContent = user.email;
+
   // 清空表单
   loginUsername.value = '';
   loginPassword.value = '';
@@ -282,14 +313,20 @@ function showLoggedIn(user) {
   registerPassword.value = '';
 }
 
-// ── 登出 ─────────────────────────────────────────
+// ── 登出 → 回到登录页 ──────────────────────────
 document.getElementById('btn-logout').addEventListener('click', async () => {
   await fetch(`${API_BASE}/logout`, {
     method: 'POST',
     credentials: 'include',
   });
+  // 隐藏主页
+  homepage?.classList.add('hidden');
+  // 显示未登录元素
+  heroSection?.classList.remove('hidden');
   panelLoggedIn.classList.add('hidden');
   panelLoginForm.classList.remove('hidden');
+  panelRegisterForm.classList.add('hidden');
+  if (loginPanel) loginPanel.classList.remove('hidden');
   panelLabel.textContent = tl('loginLabel');
 });
 
@@ -305,16 +342,18 @@ async function init() {
     if (res.ok) {
       const data = await res.json();
       if (data.success) {
-        // GET /me 返回 user 对象（与 userResponse 一致）
         showLoggedIn(data.data);
         return;
       }
     }
   } catch {}
-  // 未登录，显示登录面板
+  // 未登录，显示登录界面
+  homepage?.classList.add('hidden');
+  heroSection?.classList.remove('hidden');
   panelLoggedIn.classList.add('hidden');
   panelLoginForm.classList.remove('hidden');
   panelRegisterForm.classList.add('hidden');
+  if (loginPanel) loginPanel.classList.remove('hidden');
 }
 
 function showError(el, msg) {
