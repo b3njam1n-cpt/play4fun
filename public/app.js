@@ -279,7 +279,7 @@ function handleImageFile(file) {
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+    const dataUrl = canvas.toDataURL('image/png');
     aiImageBase64 = dataUrl.split(',')[1];
     if (aiImagePreviewImg) aiImagePreviewImg.src = dataUrl;
     if (aiImagePreview) aiImagePreview.classList.remove('hidden');

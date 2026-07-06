@@ -97,14 +97,18 @@ async function streamVision(
 ) {
   const modelId = MODELS.vision.id;
   // Llama 3.2 Vision 使用 image_url + base64 data URL 格式
+  const langHint = '【重要：请用和提问相同的语言回复。】';
   const input = {
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: message },
-        { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageBase64 } },
-      ],
-    }],
+    messages: [
+      ...(history || []).slice(-10),
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: langHint + '\n\n' + message },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,' + imageBase64 } },
+        ],
+      },
+    ],
   };
 
   // Workers 环境 → AI binding
@@ -151,12 +155,11 @@ async function streamLlama(
   enqueue: (type: string, data: string) => void,
   env: AppEnv['Bindings'],
 ) {
-  // 构建消息：语言指令 + 历史 + 当前
-  const sysMsg = 'Reply in the same language as the user. 用用户使用的语言回复。';
+  // 构建消息：语言指令直接注入用户消息（Llama 对 system role 遵循度低）
+  const langHint = '【重要：请用和提问相同的语言回复。如果用户用中文提问，你必须用中文回答。】';
   const messages = [
-    { role: 'system', content: sysMsg },
     ...(history || []).slice(-20),
-    { role: 'user', content: message },
+    { role: 'user', content: langHint + '\n\n' + message },
   ];
 
   // 方案 A：Cloudflare Workers 环境 → AI binding
