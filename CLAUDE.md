@@ -76,6 +76,7 @@ npm run deploy    # 部署到 Cloudflare
 4. **架构变更必须同步更新 `docs/01-architecture.md`**
 5. **每个会话结束前，更新本文件中的「当前进程」部分**
 6. **每个会话结束前，追加一条记录到 `docs/05-ai-dev-log.md`**
+7. **分支合并到 master 后，在 `CHANGELOG.md` 中追加该分支的变更记录**
 
 ## 多设备 AI 协作规则
 
