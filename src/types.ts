@@ -7,8 +7,12 @@ export interface AppEnv {
   Bindings: {
     ENVIRONMENT: string;
     JWT_SECRET: string;
-    DB?: D1Database;     // D1 数据库绑定（生产环境）
-    KV?: KVNamespace;    // KV 命名空间绑定
+    DB?: D1Database;         // D1 数据库绑定（生产环境）
+    KV?: KVNamespace;        // KV 命名空间绑定
+    AI?: any;                // Workers AI binding（生产环境）
+    GEMINI_API_KEY?: string; // Gemini API key
+    CF_ACCOUNT_ID?: string;  // Cloudflare Account ID（本地开发用）
+    CF_API_TOKEN?: string;   // Cloudflare API Token（本地开发用）
   };
   Variables: {
     userId?: string;     // JWT 中间件注入当前用户 ID

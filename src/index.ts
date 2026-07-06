@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { authRoutes } from './routes/auth';
+import { chatRoutes } from './routes/chat';
 import type { AppEnv } from './types';
 
 const app = new Hono<AppEnv>();
@@ -16,10 +17,16 @@ app.use('*', cors({
 // 本地开发环境：注入默认 Bindings（Cloudflare Workers 由平台自动注入）
 app.use('*', async (c, next) => {
   if (!c.env) {
+    // @ts-ignore - Node.js 本地开发：从 process.env 读取环境变量
+    const processEnv = typeof process !== 'undefined' ? process.env : {};
     (c as any).env = {
       ENVIRONMENT: 'development',
-      JWT_SECRET: undefined, // 走 constants.ts 中的 fallback
-      DB: undefined,         // 走 localDB 内存回退
+      JWT_SECRET: undefined,
+      DB: undefined,
+      GEMINI_API_KEY: processEnv.GEMINI_API_KEY,
+      CF_ACCOUNT_ID: processEnv.CF_ACCOUNT_ID,
+      CF_API_TOKEN: processEnv.CF_API_TOKEN,
+      AI: undefined,
     };
   }
   await next();
@@ -27,6 +34,7 @@ app.use('*', async (c, next) => {
 
 // ── API 路由 ────────────────────────────────────
 app.route('/auth', authRoutes);
+app.route('/api', chatRoutes);
 
 // Health check
 app.get('/api/health', (c) => {

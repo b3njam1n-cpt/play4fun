@@ -1,14 +1,16 @@
 // ============================================================
-// Play4Fun — Frontend Logic v4
+// Play4Fun — Frontend Logic v5
 // ============================================================
-console.log('🚀 app.js v4 已加载');
+console.log('🚀 app.js v5 已加载');
 
 const API_BASE = '/auth';
+const CHAT_API = '/api/chat';
 
 // ── 多语言 ──────────────────────────────────────
 const t = {
   zh: {
-    searchPlaceholder: '搜索任何内容…',
+    searchPlaceholder: '随便问点什么…',
+    searchPlaceholderNoAI: '搜索任何内容…',
     loginLabel: '登录',
     registerLabel: '注册',
     userPlaceholder: '邮箱',
@@ -26,9 +28,13 @@ const t = {
     welcomePrefix: '欢迎',
     welcomeSuffix: '来我们的 playground',
     homepageSubtitle: '这里什么都有，也什么都没有——剩下的等待你来定义。',
+    aiPlaceholder: '继续对话… (Enter 发送, Esc 关闭)',
+    aiThinking: '思考中...',
+    aiError: '出错了，请重试。',
   },
   en: {
-    searchPlaceholder: 'Search anything...',
+    searchPlaceholder: 'Ask anything...',
+    searchPlaceholderNoAI: 'Search anything...',
     loginLabel: 'Sign In',
     registerLabel: 'Register',
     userPlaceholder: 'Email',
@@ -46,6 +52,9 @@ const t = {
     welcomePrefix: 'Welcome',
     welcomeSuffix: 'to our playground',
     homepageSubtitle: 'Everything here, and nothing here — the rest is up to you.',
+    aiPlaceholder: 'Continue... (Enter to send, Esc to close)',
+    aiThinking: 'Thinking...',
+    aiError: 'Something went wrong. Try again.',
   },
 };
 
@@ -91,7 +100,39 @@ const displayUsername = document.getElementById('display-username');
 const displayEmail = document.getElementById('display-email');
 const notifText = document.getElementById('notif-text');
 
-// ── 按钮防抖工具 ────────────────────────────────
+// AI 终端
+const aiTerminal = document.getElementById('ai-terminal');
+const aiTerminalContent = document.getElementById('ai-terminal-content');
+const aiTerminalInput = document.getElementById('ai-terminal-input');
+const aiTerminalTitle = document.getElementById('ai-terminal-title');
+const aiTerminalModelBadge = document.getElementById('ai-terminal-model-badge');
+const modelSelector = document.getElementById('model-selector');
+const modelName = document.getElementById('model-name');
+const modelIcon = document.getElementById('model-icon');
+
+// ── AI 模型状态 ─────────────────────────────────
+const models = {
+  gemini: { name: 'Gemini', icon: '🧠' },
+  llama: { name: 'Llama', icon: '🦙' },
+};
+let currentModel = 'gemini';
+
+function switchModel() {
+  const keys = Object.keys(models);
+  const idx = keys.indexOf(currentModel);
+  currentModel = keys[(idx + 1) % keys.length];
+  const m = models[currentModel];
+  if (modelName) modelName.textContent = m.name;
+  if (modelIcon) modelIcon.textContent = m.icon;
+  if (aiTerminalModelBadge) aiTerminalModelBadge.textContent = m.name;
+}
+
+// 模型选择器点击
+if (modelSelector) {
+  modelSelector.addEventListener('click', switchModel);
+}
+
+// ── 按钮防抖 ────────────────────────────────────
 function lockButton(btn, text) {
   btn.disabled = true;
   btn.dataset.originalText = btn.textContent;
@@ -99,7 +140,6 @@ function lockButton(btn, text) {
   btn.style.opacity = '0.6';
   btn.style.cursor = 'not-allowed';
 }
-
 function unlockButton(btn) {
   btn.disabled = false;
   btn.textContent = btn.dataset.originalText || btn.textContent;
@@ -107,7 +147,7 @@ function unlockButton(btn) {
   btn.style.cursor = '';
 }
 
-// ── 搜索栏（桌面端）─────────────────────────────
+// ── 搜索栏 ──────────────────────────────────────
 searchInput?.addEventListener('focus', () => searchBar?.classList.add('focused'));
 searchInput?.addEventListener('blur', () => searchBar?.classList.remove('focused'));
 searchInput?.addEventListener('input', () => {
@@ -119,8 +159,15 @@ searchClear?.addEventListener('mousedown', (e) => {
   searchClear.classList.add('hidden');
   searchInput.focus();
 });
+// Enter → AI Chat
+searchInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && searchInput.value.trim()) {
+    openAiTerminal(searchInput.value.trim());
+    searchInput.value = '';
+    searchClear?.classList.add('hidden');
+  }
+});
 
-// ── 搜索栏（手机端）─────────────────────────────
 searchInputMobile?.addEventListener('input', () => {
   searchClearMobile?.classList.toggle('hidden', !searchInputMobile.value);
 });
@@ -138,25 +185,16 @@ btnEn.addEventListener('click', () => setLang('en'));
 function setLang(l) {
   if (lang === l) return;
   lang = l;
-
-  if (l === 'zh') {
-    btnZh.classList.add('active');
-    btnEn.classList.remove('active');
-  } else {
-    btnEn.classList.add('active');
-    btnZh.classList.remove('active');
-  }
-
+  if (l === 'zh') { btnZh.classList.add('active'); btnEn.classList.remove('active'); }
+  else { btnEn.classList.add('active'); btnZh.classList.remove('active'); }
   document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
-  document.body.style.fontFamily = l === 'zh'
-    ? "'Noto Sans SC', sans-serif"
-    : "'DM Sans', sans-serif";
+  document.body.style.fontFamily = l === 'zh' ? "'Noto Sans SC', sans-serif" : "'DM Sans', sans-serif";
   updateTexts();
 }
 
 function updateTexts() {
   searchInput.placeholder = tl('searchPlaceholder');
-  if (searchInputMobile) searchInputMobile.placeholder = tl('searchPlaceholder');
+  if (searchInputMobile) searchInputMobile.placeholder = tl('searchPlaceholderNoAI');
   panelLabel.textContent = tl('loginLabel');
   loginUsername.placeholder = tl('userPlaceholder');
   loginPassword.placeholder = tl('passPlaceholder');
@@ -170,12 +208,10 @@ function updateTexts() {
   document.getElementById('btn-login-toggle').textContent = tl('backToLogin');
   document.getElementById('btn-logout').textContent = tl('signOut');
   notifText.textContent = tl('notif');
-
-  // 主页文案
   if (welcomePrefix) welcomePrefix.textContent = tl('welcomePrefix');
   if (welcomeSuffix) welcomeSuffix.textContent = tl('welcomeSuffix');
   if (homepageSubtitle) homepageSubtitle.textContent = tl('homepageSubtitle');
-
+  if (aiTerminalInput) aiTerminalInput.placeholder = tl('aiPlaceholder');
   if (panelRegisterForm.classList.contains('hidden') && panelLoginForm.classList.contains('hidden') === false) {
     panelLabel.textContent = tl('loginLabel');
   }
@@ -195,133 +231,67 @@ document.getElementById('btn-login-toggle').addEventListener('click', () => {
   registerError.classList.add('hidden');
 });
 
-// ── 登录 ─────────────────────────────────────────
+// ── 登录 / 注册 / 登出 ─────────────────────────
 btnLogin.addEventListener('click', handleLogin);
-loginPassword.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') handleLogin();
-});
+loginPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
 
 async function handleLogin() {
   loginError.classList.add('hidden');
   const email = loginUsername.value.trim();
   const password = loginPassword.value;
-
-  if (!email || !password) {
-    showError(loginError, lang === 'zh' ? '请填写邮箱和密码' : 'Please fill in email and password');
-    return;
-  }
-
+  if (!email || !password) { showError(loginError, lang === 'zh' ? '请填写邮箱和密码' : 'Please fill in email and password'); return; }
   lockButton(btnLogin, tl('loggingIn'));
-
   try {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await fetch(`${API_BASE}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email, password }) });
     const data = await res.json();
-    if (!data.success) {
-      const msg = lang === 'zh' ? '邮箱或密码错误' : 'Invalid email or password';
-      showError(loginError, msg);
-      unlockButton(btnLogin);
-      return;
-    }
+    if (!data.success) { showError(loginError, lang === 'zh' ? '邮箱或密码错误' : 'Invalid email or password'); unlockButton(btnLogin); return; }
     showLoggedIn(data.data.user);
-  } catch {
-    showError(loginError, lang === 'zh' ? '网络错误' : 'Network error');
-  }
+  } catch { showError(loginError, lang === 'zh' ? '网络错误' : 'Network error'); }
   unlockButton(btnLogin);
 }
 
-// ── 注册 ─────────────────────────────────────────
 btnRegisterSubmit.addEventListener('click', handleRegister);
-registerPassword.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') handleRegister();
-});
+registerPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRegister(); });
 
 async function handleRegister() {
   registerError.classList.add('hidden');
   const displayName = registerUsername.value.trim();
   const email = registerEmail.value.trim();
   const password = registerPassword.value;
-
-  if (!email || !password) {
-    showError(registerError, lang === 'zh' ? '请填写邮箱和密码' : 'Please fill in email and password');
-    return;
-  }
-  if (password.length < 8) {
-    showError(registerError, lang === 'zh' ? '密码至少需要 8 位' : 'Password must be at least 8 characters');
-    return;
-  }
-
+  if (!email || !password) { showError(registerError, lang === 'zh' ? '请填写邮箱和密码' : 'Please fill in email and password'); return; }
+  if (password.length < 8) { showError(registerError, lang === 'zh' ? '密码至少需要 8 位' : 'Password must be at least 8 characters'); return; }
   lockButton(btnRegisterSubmit, tl('registering'));
-
   try {
-    const body = { email, password };
-    if (displayName) body.display_name = displayName;
-
-    const res = await fetch(`${API_BASE}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-    });
+    const body = { email, password }; if (displayName) body.display_name = displayName;
+    const res = await fetch(`${API_BASE}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
     const data = await res.json();
     if (!data.success) {
-      const messages = {
-        email_exists: lang === 'zh' ? '该邮箱已被注册' : 'Email already registered',
-        email_invalid: lang === 'zh' ? '邮箱格式无效' : 'Invalid email format',
-      };
-      showError(registerError, messages[data.error?.code] || data.message);
-      unlockButton(btnRegisterSubmit);
-      return;
+      const messages = { email_exists: lang === 'zh' ? '该邮箱已被注册' : 'Email already registered', email_invalid: lang === 'zh' ? '邮箱格式无效' : 'Invalid email format' };
+      showError(registerError, messages[data.error?.code] || data.message); unlockButton(btnRegisterSubmit); return;
     }
     showLoggedIn(data.data.user);
-  } catch {
-    showError(registerError, lang === 'zh' ? '网络错误' : 'Network error');
-  }
+  } catch { showError(registerError, lang === 'zh' ? '网络错误' : 'Network error'); }
   unlockButton(btnRegisterSubmit);
 }
 
-// ── 已登录 → 显示主页 ──────────────────────────
 function showLoggedIn(user) {
-  // 隐藏未登录元素
   heroSection?.classList.add('hidden');
   panelLoginForm.classList.add('hidden');
   panelRegisterForm.classList.add('hidden');
   panelLoggedIn.classList.add('hidden');
-  // 隐藏整个登录面板容器
   if (loginPanel) loginPanel.classList.add('hidden');
-
-  // 显示主页
   homepage?.classList.remove('hidden');
-
-  // 设置欢迎语
   const name = user.display_name || user.email?.split('@')[0] || user.email;
   if (welcomeName) welcomeName.textContent = name;
-
-  // 更新右侧登录面板中的用户信息（保留以备后用）
   displayUsername.textContent = name;
   displayEmail.textContent = user.email;
-
-  // 清空表单
-  loginUsername.value = '';
-  loginPassword.value = '';
-  registerUsername.value = '';
-  registerEmail.value = '';
-  registerPassword.value = '';
+  loginUsername.value = ''; loginPassword.value = '';
+  registerUsername.value = ''; registerEmail.value = ''; registerPassword.value = '';
 }
 
-// ── 登出 → 回到登录页 ──────────────────────────
 document.getElementById('btn-logout').addEventListener('click', async () => {
-  await fetch(`${API_BASE}/logout`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-  // 隐藏主页
+  await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
   homepage?.classList.add('hidden');
-  // 显示未登录元素
   heroSection?.classList.remove('hidden');
   panelLoggedIn.classList.add('hidden');
   panelLoginForm.classList.remove('hidden');
@@ -330,24 +300,171 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
   panelLabel.textContent = tl('loginLabel');
 });
 
-// ── 忘记密码 ────────────────────────────────────
 document.getElementById('btn-forgot').addEventListener('click', () => {
   alert(lang === 'zh' ? '请联系管理员重置密码' : 'Please contact admin for password reset');
 });
 
-// ── 页面初始化：检查登录状态 ────────────────────
+// ══════════════════════════════════════════════════
+// AI 终端
+// ══════════════════════════════════════════════════
+
+let isAiStreaming = false;
+
+function openAiTerminal(query) {
+  if (!aiTerminal || !aiTerminalContent) return;
+  aiTerminal.classList.remove('hidden');
+  // 清空之前的对话
+  aiTerminalContent.innerHTML = '';
+  // 添加用户消息
+  appendAiMessage('user', query);
+  // 添加 AI 占位
+  const aiMsgEl = appendAiMessage('ai', '', true);
+  // 发送请求
+  sendAiChat(query, aiMsgEl);
+  // 聚焦输入
+  setTimeout(() => aiTerminalInput?.focus(), 100);
+}
+
+function closeAiTerminal() {
+  aiTerminal?.classList.add('hidden');
+  aiTerminalContent.innerHTML = '';
+  if (aiTerminalInput) aiTerminalInput.value = '';
+  isAiStreaming = false;
+}
+
+// 关闭按钮
+document.getElementById('ai-terminal-close')?.addEventListener('click', closeAiTerminal);
+
+// 点击遮罩关闭
+aiTerminal?.addEventListener('click', (e) => {
+  if (e.target === aiTerminal) closeAiTerminal();
+});
+
+// Esc 关闭
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && aiTerminal && !aiTerminal.classList.contains('hidden')) {
+    closeAiTerminal();
+  }
+});
+
+// 终端内继续对话
+aiTerminalInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && aiTerminalInput.value.trim() && !isAiStreaming) {
+    const query = aiTerminalInput.value.trim();
+    aiTerminalInput.value = '';
+    appendAiMessage('user', query);
+    const aiMsgEl = appendAiMessage('ai', '', true);
+    sendAiChat(query, aiMsgEl);
+  }
+});
+
+function appendAiMessage(role, text, isStreaming) {
+  const el = document.createElement('div');
+  el.className = 'ai-message flex gap-2';
+  if (role === 'user') {
+    el.innerHTML = `<span class="text-violet-400 flex-shrink-0">❯</span><span class="text-white/80">${escapeHtml(text)}</span>`;
+  } else {
+    const model = models[currentModel];
+    el.innerHTML = `<span class="text-emerald-400 flex-shrink-0">⚡</span><span class="text-white/70 ai-response-text${isStreaming ? ' ai-terminal-cursor' : ''}">${isStreaming ? '' : escapeHtml(text)}</span>`;
+  }
+  aiTerminalContent.appendChild(el);
+  // 滚动到底部
+  const body = document.getElementById('ai-terminal-body');
+  if (body) body.scrollTop = body.scrollHeight;
+  return el.querySelector('.ai-response-text') || el;
+}
+
+async function sendAiChat(message, targetEl) {
+  isAiStreaming = true;
+  let fullText = '';
+
+  try {
+    const res = await fetch(CHAT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, model: currentModel }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let currentEvent = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (currentEvent === 'text') {
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.text) {
+                fullText += parsed.text;
+                if (targetEl) {
+                  targetEl.textContent = fullText;
+                  targetEl.classList.add('ai-terminal-cursor');
+                }
+                // 滚动
+                const body = document.getElementById('ai-terminal-body');
+                if (body) body.scrollTop = body.scrollHeight;
+              }
+            } catch {}
+          } else if (currentEvent === 'error') {
+            try {
+              const parsed = JSON.parse(data);
+              if (targetEl) {
+                targetEl.textContent = parsed.message || tl('aiError');
+                targetEl.classList.remove('ai-terminal-cursor');
+                targetEl.classList.add('text-red-400');
+              }
+            } catch {}
+          } else if (currentEvent === 'done') {
+            if (targetEl) targetEl.classList.remove('ai-terminal-cursor');
+          }
+          currentEvent = '';
+        }
+      }
+    }
+  } catch (e) {
+    console.error('AI chat error:', e);
+    if (targetEl) {
+      targetEl.textContent = tl('aiError');
+      targetEl.classList.remove('ai-terminal-cursor');
+      targetEl.classList.add('text-red-400');
+    }
+  }
+
+  if (targetEl) targetEl.classList.remove('ai-terminal-cursor');
+  isAiStreaming = false;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── 页面初始化 ──────────────────────────────────
 async function init() {
   try {
     const res = await fetch(`${API_BASE}/me`, { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
-      if (data.success) {
-        showLoggedIn(data.data);
-        return;
-      }
+      if (data.success) { showLoggedIn(data.data); return; }
     }
   } catch {}
-  // 未登录，显示登录界面
   homepage?.classList.add('hidden');
   heroSection?.classList.remove('hidden');
   panelLoggedIn.classList.add('hidden');
@@ -356,10 +473,7 @@ async function init() {
   if (loginPanel) loginPanel.classList.remove('hidden');
 }
 
-function showError(el, msg) {
-  el.textContent = msg;
-  el.classList.remove('hidden');
-}
+function showError(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
 
 setLang('zh');
 init();
