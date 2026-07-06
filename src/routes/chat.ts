@@ -61,12 +61,7 @@ chatRoutes.post('/chat', async (c) => {
         if (hasImage) {
           await streamVision(prompt, image!, history, enqueue, c.env);
         } else if (modelKey === 'gemini') {
-          try {
-            await streamGemini(prompt, history, enqueue, c.env);
-          } catch {
-            enqueue('text', JSON.stringify({ text: '⚠️ Gemini 暂时不可用，已自动切换到 Llama...\n\n' }));
-            await streamLlama(prompt, history, enqueue, c.env);
-          }
+          await streamGemini(prompt, history, enqueue, c.env);
         } else {
           await streamLlama(prompt, history, enqueue, c.env);
         }
@@ -124,18 +119,28 @@ async function streamGemini(
     { role: 'user', parts: [{ text: langHint + '\n\n' + message }] },
   ];
 
-  const res = await fetch(MODELS.gemini.endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-    body: JSON.stringify({
-      contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-    }),
+  const body = JSON.stringify({
+    contents,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error('Gemini API error (' + res.status + '): ' + errText.slice(0, 200));
+  // 最多重试 3 次，应对 503/429 等临时错误
+  let res: Response | undefined;
+  let lastError = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+    res = await fetch(MODELS.gemini.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+      body,
+    });
+    if (res.ok || res.status !== 503) break;
+    lastError = '503';
+  }
+
+  if (!res || !res.ok) {
+    const errText = res ? await res.text() : lastError;
+    throw new Error('Gemini API error (' + (res?.status || '???') + '): ' + errText.slice(0, 200));
   }
 
   const reader = res.body?.getReader();
