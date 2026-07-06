@@ -12,7 +12,7 @@ const MODELS = {
   gemini: {
     id: 'gemini-flash-latest',
     name: 'Gemini Flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
+    endpoint: 'https://ai-studio.vieplay4fun.win/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
@@ -134,9 +134,6 @@ async function streamGemini(
       headers: {
         'Content-Type': 'application/json',
         'X-goog-api-key': apiKey,
-        'Accept-Language': 'en-US',
-        'User-Agent': 'Mozilla/5.0 (compatible; Play4Fun/1.0)',
-        'X-Goog-API-Client': 'gl-us',
       },
       body,
     });
