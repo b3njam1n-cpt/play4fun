@@ -15,6 +15,12 @@ const MODELS = {
     endpoint: (accountId: string) =>
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
   },
+  vision: {
+    id: '@cf/llava-hf/llava-1.5-7b-hf',
+    name: 'LLaVA 1.5 (视觉)',
+    endpoint: (accountId: string) =>
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/llava-hf/llava-1.5-7b-hf`,
+  },
 } as const;
 
 type ModelKey = keyof typeof MODELS;
@@ -22,19 +28,22 @@ type ModelKey = keyof typeof MODELS;
 // ── POST /api/chat（SSE 流式）───────────────────
 
 chatRoutes.post('/chat', async (c) => {
-  let body: { message?: string; model?: string };
+  let body: { message?: string; model?: string; image?: string };
   try {
     body = await c.req.json();
   } catch {
     return c.json({ success: false, message: 'invalid_json' }, 400);
   }
 
-  const { message, model } = body;
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+  const { message, model, image } = body;
+  const hasImage = image && typeof image === 'string' && image.length > 0;
+  const prompt = (message && typeof message === 'string' && message.trim()) || (hasImage ? '描述这张图片' : '');
+
+  if (!prompt && !hasImage) {
     return c.json({ success: false, message: 'message_required' }, 400);
   }
 
-  const modelKey: ModelKey = 'llama';
+  const modelKey: ModelKey = hasImage ? 'vision' : 'llama';
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -43,7 +52,11 @@ chatRoutes.post('/chat', async (c) => {
       };
 
       try {
-        await streamLlama(message, enqueue, c.env);
+        if (hasImage) {
+          await streamVision(prompt, image!, enqueue, c.env);
+        } else {
+          await streamLlama(prompt, enqueue, c.env);
+        }
         enqueue('done', '{}');
       } catch (e: any) {
         console.error(`[chat:llama] error:`, e);
@@ -72,6 +85,72 @@ chatRoutes.post('/chat', async (c) => {
 //   enqueue: (type: string, data: string) => void,
 //   env: AppEnv['Bindings'],
 // ) { ... }
+
+// ── Vision 流式（LLaVA，图片分析）───────────────
+
+// base64 → 字节数组（Workers AI 需要字节数组，不是 base64 字符串）
+function base64ToBytes(b64: string): number[] {
+  // Node.js: 用 Buffer；Workers/浏览器: 用 atob
+  const g: any = globalThis;
+  if (g.Buffer) {
+    return Array.from(g.Buffer.from(b64, 'base64'));
+  }
+  const bin = g.atob(b64);
+  const bytes: number[] = [];
+  for (let i = 0; i < bin.length; i++) bytes.push(bin.charCodeAt(i));
+  return bytes;
+}
+
+async function streamVision(
+  message: string,
+  imageBase64: string,
+  enqueue: (type: string, data: string) => void,
+  env: AppEnv['Bindings'],
+) {
+  const modelId = MODELS.vision.id;
+  const imageArray = base64ToBytes(imageBase64);
+  const input = { image: imageArray, prompt: message };
+
+  // Workers 环境 → AI binding
+  if (env.AI && typeof env.AI.run === 'function') {
+    try {
+      const result = await env.AI.run(modelId, input);
+      const text = typeof result === 'string' ? result : result?.response || result?.description || JSON.stringify(result);
+      enqueue('text', JSON.stringify({ text }));
+    } catch (e: any) {
+      throw new Error('Vision AI error: ' + e.message);
+    }
+    return;
+  }
+
+  // 本地开发 → REST API
+  const accountId = env.CF_ACCOUNT_ID;
+  const apiToken = env.CF_API_TOKEN;
+  if (!accountId || !apiToken) {
+    enqueue('error', JSON.stringify({
+      message: '视觉模型需要 CF_ACCOUNT_ID 和 CF_API_TOKEN。在 .env 中配置。',
+    }));
+    return;
+  }
+
+  const res = await fetch(MODELS.vision.endpoint(accountId), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiToken,
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error('Vision API error (' + res.status + '): ' + errText.slice(0, 200));
+  }
+
+  const data: any = await res.json();
+  const text = data.result?.response || data.result?.description || data.response || JSON.stringify(data);
+  enqueue('text', JSON.stringify({ text }));
+}
 
 // ── Llama 流式（Workers AI → SSE）───────────────
 
