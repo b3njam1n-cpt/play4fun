@@ -10,9 +10,9 @@ export const chatRoutes = new Hono<AppEnv>();
 
 const MODELS = {
   gemini: {
-    id: 'gemini-flash-latest',
-    name: 'Gemini Flash',
-    endpoint: 'https://ai-studio.vieplay4fun.win/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse',
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
@@ -136,6 +136,7 @@ async function streamGemini(
         'X-goog-api-key': apiKey,
       },
       body,
+      cf: { requestPriority: 'weight=192' } as any,
     });
     if (res.ok || (res.status !== 503 && res.status !== 400)) break;
     lastError = '503';

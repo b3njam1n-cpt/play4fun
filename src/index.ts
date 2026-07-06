@@ -6,25 +6,6 @@ import type { AppEnv } from './types';
 
 const app = new Hono<AppEnv>();
 
-// ── Gemini 反向代理（解决 Google API 地域限制）───
-app.all('*', async (c, next) => {
-  const host = c.req.header('Host') || '';
-  if (host.startsWith('ai-studio.')) {
-    const url = new URL(c.req.url);
-    url.host = 'generativelanguage.googleapis.com';
-    const newReq = new Request(url, {
-      method: c.req.method,
-      headers: c.req.raw ? c.req.raw.headers : new Headers(),
-      body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? await c.req.text().catch(() => undefined) : undefined,
-    });
-    newReq.headers.set('Host', 'generativelanguage.googleapis.com');
-    newReq.headers.delete('Origin');
-    newReq.headers.delete('Referer');
-    return fetch(newReq);
-  }
-  await next();
-});
-
 // ── 全局中间件 ──────────────────────────────────
 app.use('*', cors({
   origin: '*',
