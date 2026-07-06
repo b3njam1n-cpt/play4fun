@@ -79,3 +79,29 @@
 - 合并 fun-2 → master → fun-3 → master
 
 ---
+
+## 2026-07-06 (笔记本) — fun-4 AI 对话功能
+
+**完成内容**：
+- 搭建 `/api/chat` SSE 流式端点，同时支持 Gemini 2.0 Flash 和 Llama 3.1 8B
+- 搜索栏加入模型选择器 pill（点击切换 Gemini 🧠 / Llama 🦙）
+- AI 终端弹窗：macOS 三色按钮、monospace 字体、流式打字+光标闪烁、多轮对话
+- 前端 SSE 流读取（fetch + ReadableStream），无第三方依赖
+
+**关键决策**：
+- Gemini 免费 tier（15 RPM / 1500 RPD），无需付费即可以本地开发
+- Llama 优先用 Workers AI binding，本地回退 REST API
+- 未配置 API key 时返回友好错误提示（SSE error 事件），不崩溃
+- `c.env` 在本地开发中间件中注入 `process.env`，`chat.ts` 只读 `c.env`
+
+**踩坑记录**：
+- Edit 工具对 CJK 文件的 CRLF 行尾匹配失败 → 改 PowerShell 直接操作
+- `process.env` 在 CF Workers TS 类型中不存在 → 中间件中 `@ts-ignore` + 运行时 typeof 检查
+- Workers AI REST API 返回的 SSE 格式与 Gemini 不同 → 各自独立解析逻辑
+
+**下一步**：
+- 去 https://aistudio.google.com/ 获取 Gemini API key，填入 .env
+- 浏览器测试完整 AI 对话流程
+- 合并 fun-2 → fun-3 → fun-4 → master
+
+---
