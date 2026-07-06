@@ -3,6 +3,10 @@ name = "play4fun"
 main = "src/index.ts"
 compatibility_date = "2025-07-05"
 
+# 固定到 Google 支持的地区，避免 Gemini API 地域限制
+[placement]
+mode = "smart"
+
 # 本地开发服务端口
 [dev]
 port = 8787
