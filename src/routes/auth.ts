@@ -5,6 +5,16 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { localDB } from '../db/local-store';
+import {
+  JWT_FALLBACK_SECRET,
+  JWT_EXPIRY,
+  JWT_ALGORITHM,
+  BCRYPT_COST,
+  COOKIE_NAME,
+  COOKIE_MAX_AGE,
+  COOKIE_OPTIONS,
+  COOKIE_CLEAR,
+} from '../utils/constants';
 import type { AppEnv } from '../types';
 
 export const authRoutes = new Hono<AppEnv>();
@@ -14,6 +24,7 @@ export const authRoutes = new Hono<AppEnv>();
 const registerSchema = z.object({
   email: z.string().email('email_invalid'),
   password: z.string().min(8, 'password_too_short'),
+  display_name: z.string().min(1).max(50).optional(),
 });
 
 const loginSchema = z.object({
@@ -21,20 +32,25 @@ const loginSchema = z.object({
   password: z.string().min(1, 'password_required'),
 });
 
-// ── JWT 密钥 ────────────────────────────────────
+// ── JWT ─────────────────────────────────────────
+
 function getJwtSecret(env: AppEnv['Bindings']): string {
-  return env.JWT_SECRET || 'dev-secret-change-in-production-please';
+  return env.JWT_SECRET || JWT_FALLBACK_SECRET;
 }
 
-const JWT_EXPIRY = '24h';
-
-async function createToken(userId: string, env: AppEnv['Bindings']): Promise<string> {
+/**
+ * 创建 JWT，包含 sub (userId) 和 jti (token 唯一标识)
+ * jti 用于服务端 Session 管理和注销
+ */
+async function createToken(userId: string, env: AppEnv['Bindings']): Promise<{ token: string; jti: string }> {
+  const jti = crypto.randomUUID();
   const secret = new TextEncoder().encode(getJwtSecret(env));
-  return await new SignJWT({ sub: userId })
-    .setProtectedHeader({ alg: 'HS256' })
+  const token = await new SignJWT({ sub: userId, jti })
+    .setProtectedHeader({ alg: JWT_ALGORITHM })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRY)
     .sign(secret);
+  return { token, jti };
 }
 
 // ── 数据访问抽象（D1 优先，本地内存回退）───────
@@ -56,7 +72,6 @@ async function findUserByEmail(email: string, db?: D1Database): Promise<UserRow 
       'SELECT id, email, password_hash, provider, google_id, display_name, avatar_url, created_at FROM users WHERE email = ?'
     ).bind(email).first<UserRow>();
   }
-  // 本地内存回退
   const user = localDB.getUserByEmail(email);
   return user ? { ...user, password_hash: user.password_hash ?? null } : null;
 }
@@ -71,31 +86,51 @@ async function findUserById(id: string, db?: D1Database): Promise<UserRow | null
   return user ? { ...user, password_hash: user.password_hash ?? null } : null;
 }
 
-function emailExists(email: string, db?: D1Database): boolean {
+/**
+ * 写入 Session 记录（D1 + 本地回退）
+ */
+function createSession(params: {
+  sessionId: string;
+  userId: string;
+  tokenJti: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  expiresAt: number;
+  now: number;
+}, db?: D1Database): void {
   if (db) {
-    // 注意：这个同步调用在 D1 场景下不可用，实际使用 findUserByEmail
-    return false;
-  }
-  return localDB.emailExists(email);
-}
-
-function createUserInStore(user: UserRow, db?: D1Database): void {
-  if (db) {
-    // D1 场景使用 prepare().run()
+    db.prepare(`
+      INSERT INTO sessions (id, user_id, token_jti, user_agent, ip_address, expires_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      params.sessionId, params.userId, params.tokenJti,
+      params.userAgent, params.ipAddress,
+      params.expiresAt, params.now
+    ).run();
     return;
   }
-  localDB.createUser({
+  // 本地开发：记录到内存（简化版，仅用于调试）
+  localDB.createSession({
+    id: params.sessionId,
+    user_id: params.userId,
+    token_jti: params.tokenJti,
+    user_agent: params.userAgent,
+    ip_address: params.ipAddress,
+    expires_at: params.expiresAt,
+    created_at: params.now,
+  });
+}
+
+/** 统一的用户响应格式，所有返回用户数据的地方都用这个 */
+function userResponse(user: UserRow) {
+  return {
     id: user.id,
     email: user.email,
-    password_hash: user.password_hash,
     provider: user.provider,
-    google_id: user.google_id,
-    github_id: null,
     display_name: user.display_name,
     avatar_url: user.avatar_url,
-    created_at: user.created_at,
-    updated_at: user.created_at,
-  });
+    created_at: new Date(user.created_at * 1000).toISOString(),
+  };
 }
 
 // ── POST /auth/register ─────────────────────────
@@ -114,7 +149,7 @@ authRoutes.post('/register', async (c) => {
     return error(c, 400, firstIssue.message, { field: firstIssue.path.join('.') });
   }
 
-  const { email, password } = result.data;
+  const { email, password, display_name } = result.data;
 
   // 检查邮箱是否已存在
   const existing = await findUserByEmail(email, c.env.DB);
@@ -125,7 +160,7 @@ authRoutes.post('/register', async (c) => {
   // 创建用户
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   const newUser: UserRow = {
     id,
@@ -133,28 +168,53 @@ authRoutes.post('/register', async (c) => {
     password_hash: passwordHash,
     provider: 'email',
     google_id: null,
-    display_name: null,
+    display_name: display_name || null,
     avatar_url: null,
     created_at: now,
   };
 
-  // 双重写入：D1 + 本地回退
+  // 写入 D1（生产）或本地内存（开发）
   if (c.env.DB) {
-    await c.env.DB.prepare(`
-      INSERT INTO users (id, email, password_hash, provider, created_at, updated_at)
-      VALUES (?, ?, ?, 'email', ?, ?)
-    `).bind(id, email, passwordHash, now, now).run();
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO users (id, email, password_hash, provider, display_name, created_at, updated_at)
+        VALUES (?, ?, ?, 'email', ?, ?, ?)
+      `).bind(id, email, passwordHash, display_name || null, now, now).run();
+    } catch (e) {
+      console.error('D1 insert user failed:', e);
+      return error(c, 500, 'db_error', {});
+    }
   }
-  createUserInStore(newUser, c.env.DB);
-
-  // 生成 JWT
-  const token = await createToken(id, c.env);
-  c.header('Set-Cookie', `token=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`);
-
-  return success(c, {
+  localDB.createUser({
     id,
     email,
-    created_at: new Date(now * 1000).toISOString(),
+    password_hash: passwordHash,
+    provider: 'email',
+    google_id: null,
+    github_id: null,
+    display_name: display_name || null,
+    avatar_url: null,
+    created_at: now,
+    updated_at: now,
+  });
+
+  // 生成 JWT + Session
+  const { token, jti } = await createToken(id, c.env);
+  createSession({
+    sessionId: crypto.randomUUID(),
+    userId: id,
+    tokenJti: jti,
+    userAgent: c.req.header('User-Agent') || null,
+    ipAddress: c.req.header('CF-Connecting-IP') || null,
+    expiresAt: now + COOKIE_MAX_AGE,
+    now,
+  }, c.env.DB);
+
+  c.header('Set-Cookie', `${COOKIE_NAME}=${token}; ${COOKIE_OPTIONS}`);
+
+  return success(c, {
+    token,
+    user: userResponse(newUser),
   }, '注册成功', 201);
 });
 
@@ -176,7 +236,7 @@ authRoutes.post('/login', async (c) => {
 
   const { email, password } = result.data;
 
-  // 查找用户（D1 或本地回退）
+  // 查找用户
   const user = await findUserByEmail(email, c.env.DB);
 
   if (!user || !user.password_hash) {
@@ -189,26 +249,31 @@ authRoutes.post('/login', async (c) => {
     return error(c, 401, 'invalid_credentials', {});
   }
 
-  // 生成 JWT
-  const token = await createToken(user.id, c.env);
-  c.header('Set-Cookie', `token=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=86400`);
+  // 生成 JWT + Session
+  const now = Math.floor(Date.now() / 1000);
+  const { token, jti } = await createToken(user.id, c.env);
+  createSession({
+    sessionId: crypto.randomUUID(),
+    userId: user.id,
+    tokenJti: jti,
+    userAgent: c.req.header('User-Agent') || null,
+    ipAddress: c.req.header('CF-Connecting-IP') || null,
+    expiresAt: now + COOKIE_MAX_AGE,
+    now,
+  }, c.env.DB);
+
+  c.header('Set-Cookie', `${COOKIE_NAME}=${token}; ${COOKIE_OPTIONS}`);
 
   return success(c, {
     token,
-    user: {
-      id: user.id,
-      email: user.email,
-      provider: user.provider,
-      display_name: user.display_name,
-      avatar_url: user.avatar_url,
-    },
+    user: userResponse(user),
   }, '登录成功');
 });
 
 // ── POST /auth/logout ───────────────────────────
 
 authRoutes.post('/logout', async (c) => {
-  c.header('Set-Cookie', 'token=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
+  c.header('Set-Cookie', COOKIE_CLEAR);
   return success(c, null, '已登出');
 });
 
@@ -225,12 +290,5 @@ authRoutes.get('/me', requireAuth, async (c) => {
     return error(c, 404, 'user_not_found', {});
   }
 
-  return success(c, {
-    id: user.id,
-    email: user.email,
-    provider: user.provider,
-    display_name: user.display_name,
-    avatar_url: user.avatar_url,
-    created_at: new Date(user.created_at * 1000).toISOString(),
-  });
+  return success(c, userResponse(user));
 });

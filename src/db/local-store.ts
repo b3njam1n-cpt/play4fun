@@ -20,11 +20,24 @@ interface User {
   updated_at: number;
 }
 
+interface Session {
+  id: string;
+  user_id: string;
+  token_jti: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  expires_at: number;
+  created_at: number;
+}
+
 // 全局内存存储（仅开发环境）
 const users = new Map<string, User>();
+const sessions = new Map<string, Session>();
 
 export const localDB = {
-  /** 查询单个用户 */
+  // ── 用户操作 ──
+
+  /** 查询单个用户 by email */
   getUserByEmail(email: string): User | undefined {
     for (const user of users.values()) {
       if (user.email === email) return user;
@@ -42,21 +55,33 @@ export const localDB = {
     users.set(user.id, user);
   },
 
-  /** 检查邮箱是否已存在 */
-  emailExists(email: string): boolean {
-    for (const user of users.values()) {
-      if (user.email === email) return true;
-    }
-    return false;
+  // ── Session 操作 ──
+
+  /** 创建 Session */
+  createSession(session: Session): void {
+    sessions.set(session.id, session);
   },
 
-  /** 清空所有数据（调试用） */
+  /** 获取用户的所有有效 Session */
+  getSessionsByUserId(userId: string): Session[] {
+    const now = Math.floor(Date.now() / 1000);
+    const result: Session[] = [];
+    for (const s of sessions.values()) {
+      if (s.user_id === userId && s.expires_at > now) {
+        result.push(s);
+      }
+    }
+    return result;
+  },
+
+  // ── 调试工具 ──
+
   _clear(): void {
     users.clear();
+    sessions.clear();
   },
 
-  /** 获取用户总数（调试用） */
-  _count(): number {
-    return users.size;
+  _count(): { users: number; sessions: number } {
+    return { users: users.size, sessions: sessions.size };
   },
 };

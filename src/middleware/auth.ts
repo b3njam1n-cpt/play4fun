@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { jwtVerify } from 'jose';
+import { JWT_FALLBACK_SECRET } from '../utils/constants';
 import type { AppEnv } from '../types';
 import { error } from '../utils/response';
 
@@ -8,9 +9,9 @@ import { error } from '../utils/response';
  *
  * 验证顺序：
  * 1. Cookie 中的 token
- * 2. Authorization: Bearer <token>
+ * 2. Authorization: Bearer <token>  （优先级更高）
  *
- * 验证通过后将 userId 注入到 ctx.set('userId', ...)
+ * 验证通过后将 userId 注入到 c.set('userId', ...)
  */
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   let token: string | undefined;
@@ -34,7 +35,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
 
   try {
     const secret = new TextEncoder().encode(
-      c.env.JWT_SECRET || 'dev-secret-change-in-production-please'
+      c.env.JWT_SECRET || JWT_FALLBACK_SECRET
     );
     const { payload } = await jwtVerify(token, secret);
 
