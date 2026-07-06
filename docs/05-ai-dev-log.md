@@ -22,5 +22,32 @@
 
 ---
 
-> **格式说明**：每次追加一条。包含「完成内容」「关键决策」「踩坑记录」「下一步」四个部分。
-> 「踩坑记录」特别重要——你今天花了 2 小时才搞明白的东西，另一台 Claude 不应该再花 2 小时。
+## 2026-07-06 (笔记本) — fun-2 认证逻辑修复
+
+**完成内容**：
+- 审计注册/登录逻辑，发现 7 个问题，全部修复
+- 统一注册/登录响应格式为 `{ token, user: {...} }`
+- 注册支持 display_name（前端已收集但之前丢弃）
+- Session 表写入 + JWT jti 声明
+- 提取 `src/utils/constants.ts` 共享常量
+- 前端按钮防抖（请求期间禁用）
+- 清理 auth.ts 中的死代码 emailExists
+- 编写 test-smoke.mjs 冒烟测试（34 项全通过）
+- TypeScript 类型检查通过
+
+**关键决策**：
+- userResponse() 函数统一所有返回用户数据的格式，包含 id/email/provider/display_name/avatar_url/created_at
+- Session 写入与 D1 插入在同一代码路径，本地回退使用 localDB.createSession()
+- JWT 现包含 jti 声明，为后续服务端黑名单注销做准备
+
+**踩坑记录**：
+- 当前 Node v19.9.0，Wrangler 需要 >=22，无法运行 `npm run dev`。冒烟测试用纯 Node.js 绕过
+- bcryptjs 当前版本输出 `$2b$` 前缀（非 `$2a$`），都合法
+- `c.req.json()` 解析失败会抛异常，必须 try/catch 包裹
+
+**下一步**：
+- 合并 fun-2 → master（PR: https://github.com/b3njam1n-cpt/play4fun/pull/new/fun-2）
+- wrangler login → 创建 D1 → 部署上线
+- 升级 Node.js 到 22+ 以支持 Wrangler 本地开发
+
+---
