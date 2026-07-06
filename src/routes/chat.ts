@@ -12,7 +12,7 @@ const MODELS = {
   gemini: {
     id: 'gemini-flash-latest',
     name: 'Gemini Flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
+    endpoint: 'https://ai-studio.vieplay4fun.win/v1beta/models/gemini-flash-latest:streamGenerateContent?alt=sse',
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
@@ -131,10 +131,15 @@ async function streamGemini(
     if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
     res = await fetch(MODELS.gemini.endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-goog-api-key': apiKey,
+        'Accept-Language': 'en-US',
+        'User-Agent': 'Mozilla/5.0 (compatible; Play4Fun/1.0)',
+      },
       body,
     });
-    if (res.ok || res.status !== 503) break;
+    if (res.ok || (res.status !== 503 && res.status !== 400)) break;
     lastError = '503';
   }
 
