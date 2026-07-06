@@ -26,24 +26,25 @@
 | `src/db/schema.sql` | D1 建表 |
 | `src/db/local-store.ts` | 本地内存数据库（含 User + Session） |
 | `public/index.html` | 前端主页面 |
-| `public/app.js` | 前端逻辑（当前 v4） |
+| `public/app.js` | 前端逻辑（当前 v5） |
+| `src/routes/chat.ts` | AI 聊天 API（Gemini + Llama，SSE 流式） |
 | `server.js` | Node.js 本地开发入口（`npx tsx server.js`，端口 3000） |
 | `test-smoke.mjs` | 本地冒烟测试（Node.js，不依赖 Wrangler） |
 | `docs/` | **所有设计文档、API 文档、路线图** |
 
 ## 当前进程
 
-- ✅ Phase 1 MVP 核心完成（注册/登录/登出/获取用户 + JWT 中间件 + Session 管理）
-- ✅ fun-2 分支：修复 7 个注册/登录问题（响应格式统一、display_name、Session、常量提取、按钮防抖）
-- ✅ fun-3 分支：登录后主页 + 本地开发环境（`npx tsx server.js` :3000，自动种子用户）
-- ⬜ 下一步：合并 fun-2 → master → fun-3 → master，然后 wrangler login → 创建 D1 → 部署上线
+- ✅ Phase 1 MVP 核心完成
+- ✅ fun-2：修复 7 个注册/登录问题
+- ✅ fun-3：登录后主页 + 本地开发环境
+- ✅ fun-4：AI 对话功能（Gemini + Llama 双模型，终端式交互，SSE 流式）
+- ⬜ 下一步：配置 GEMINI_API_KEY 测试 AI 对话 → 合并 fun-2/3/4 → master
 - 📋 完整路线图见 `docs/04-roadmap.md`
 
 ## 开发命令
 
 ```bash
 npx tsx server.js # 启动本地开发服务器 :3000（推荐，自动创建测试用户）
-npm run dev       # Wrangler 开发服务器 :8787（需要 Node >= 22）
 npm run build     # TypeScript 类型检查
 npm run deploy    # 部署到 Cloudflare
 ```
@@ -54,7 +55,15 @@ npm run deploy    # 部署到 Cloudflare
 |------|------|------|
 | `test@example.com` | `test1234` | Tester |
 
-> 启动 `npx tsx server.js` 后自动创建。
+## AI 对话配置
+
+| 变量 | 说明 | 获取方式 |
+|------|------|----------|
+| `GEMINI_API_KEY` | Gemini 2.0 Flash（免费） | https://aistudio.google.com/ |
+| `CF_ACCOUNT_ID` | 本地用 Llama 需要 | Cloudflare Dashboard |
+| `CF_API_TOKEN` | 本地用 Llama 需要 | Cloudflare Dashboard |
+
+> 至少配置 GEMINI_API_KEY 即可在本地使用 AI 对话。在 .env 中设置。
 
 ## 最近决策
 

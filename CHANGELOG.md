@@ -42,6 +42,23 @@
 
 ---
 
+## fun-4 — AI 对话功能（Gemini + Llama 双模型，终端式交互）
+
+**合并日期**: 待合并
+**PR**: [#4](https://github.com/b3njam1n-cpt/play4fun/pull/4)
+
+### 新增
+- AI 聊天 API (`POST /api/chat`): 支持 Gemini 2.0 Flash 和 Llama 3.1 8B，SSE 流式返回
+- 搜索栏模型选择器: Dynamic Island 气泡 pill，点击切换 Gemini/Llama
+- AI 终端弹窗: 命令行风格，流式打字效果，支持多轮对话
+- 模型列表 API (`GET /api/models`)
+
+### 使用
+- 需在 `.env` 中配置 `GEMINI_API_KEY`（免费，https://aistudio.google.com/）
+- Llama 本地开发需 `CF_ACCOUNT_ID` + `CF_API_TOKEN`
+
+---
+
 ## fun-1 — 初始 MVP（响应式布局 + 认证基础）
 
 **合并日期**: 2026-07 (首次合并)
