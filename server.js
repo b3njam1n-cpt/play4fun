@@ -12,11 +12,15 @@ import app from './src/index.ts';
 import { localDB } from './src/db/local-store.ts';
 
 // ── 加载 .env 文件（Wrangler 自动，Node.js 手动）───
+// 优先读 .env（明文），不存在则从 .env.gpg 解密
+import { execSync } from 'node:child_process';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const envPath = resolve(__dirname, '.env');
-try {
-  const envContent = readFileSync(envPath, 'utf-8');
-  for (const line of envContent.split('\n')) {
+const envGpgPath = resolve(__dirname, '.env.gpg');
+
+function loadEnv(content) {
+  for (const line of content.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eqIdx = trimmed.indexOf('=');
@@ -25,8 +29,25 @@ try {
     const value = trimmed.slice(eqIdx + 1).trim();
     if (!process.env[key]) process.env[key] = value;
   }
+}
+
+try {
+  // 1. 尝试读明文 .env
+  loadEnv(readFileSync(envPath, 'utf-8'));
   console.log('📄 .env 文件已加载');
-} catch { console.log('⚠️  未找到 .env 文件'); }
+} catch {
+  try {
+    // 2. 尝试解密 .env.gpg
+    const decrypted = execSync(`gpg --decrypt --batch --quiet "${envGpgPath}"`, {
+      encoding: 'utf-8',
+      timeout: 10000,
+    });
+    loadEnv(decrypted);
+    console.log('🔐 .env.gpg 已解密加载');
+  } catch {
+    console.log('⚠️  未找到 .env 或 .env.gpg 文件');
+  }
+}
 
 // ── 静态文件服务 ────────────────────────────────
 const MIME = {
