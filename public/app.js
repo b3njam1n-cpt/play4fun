@@ -110,6 +110,14 @@ const modelSelector = document.getElementById('model-selector');
 const modelName = document.getElementById('model-name');
 const modelIcon = document.getElementById('model-icon');
 
+// AI 图片
+const aiImageInput = document.getElementById('ai-image-input');
+const aiImageBtn = document.getElementById('ai-image-btn');
+const aiImagePreview = document.getElementById('ai-image-preview');
+const aiImagePreviewImg = document.getElementById('ai-image-preview-img');
+const aiImageRemove = document.getElementById('ai-image-remove');
+let aiImageBase64 = null;
+
 // ── AI 模型状态 ─────────────────────────────────
 const models = {
   // deepseek: { name: 'DeepSeek', icon: '🐋' },  // 暂时禁用（API 消费）
@@ -310,7 +318,7 @@ document.getElementById('btn-forgot').addEventListener('click', () => {
 
 let isAiStreaming = false;
 
-function openAiTerminal(query) {
+function openAiTerminal(query) { clearImage(); {
   if (!aiTerminal || !aiTerminalContent) return;
   aiTerminal.style.display = 'flex';
   // 清空之前的对话
@@ -325,7 +333,7 @@ function openAiTerminal(query) {
   setTimeout(() => aiTerminalInput?.focus(), 100);
 }
 
-function closeAiTerminal() {
+function closeAiTerminal() { clearImage(); {
   if (aiTerminal) aiTerminal.style.display = 'none';
   if (aiTerminalContent) aiTerminalContent.innerHTML = '';
   if (aiTerminalInput) aiTerminalInput.value = '';
@@ -347,14 +355,65 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── 图片上传/粘贴 ──────────────────────────────
+
+function handleImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    aiImageBase64 = reader.result.split(',')[1]; // 去掉 data:image/...;base64, 前缀
+    if (aiImagePreviewImg) aiImagePreviewImg.src = reader.result;
+    if (aiImagePreview) aiImagePreview.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage() {
+  aiImageBase64 = null;
+  if (aiImagePreview) aiImagePreview.classList.add('hidden');
+}
+
+// 上传按钮
+aiImageBtn?.addEventListener('click', () => aiImageInput?.click());
+aiImageInput?.addEventListener('change', (e) => {
+  if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
+  aiImageInput.value = '';
+});
+
+// 移除按钮
+aiImageRemove?.addEventListener('click', clearImage);
+
+// Ctrl+V 粘贴图片
+aiTerminal?.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      handleImageFile(item.getAsFile());
+      return;
+    }
+  }
+});
+
+// 拖拽图片
+aiTerminal?.addEventListener('dragover', (e) => { e.preventDefault(); });
+aiTerminal?.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleImageFile(file);
+});
+
 // 终端内继续对话
 aiTerminalInput?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && aiTerminalInput.value.trim() && !isAiStreaming) {
+  if (e.key === 'Enter' && !isAiStreaming) {
     const query = aiTerminalInput.value.trim();
+    if (!query && !aiImageBase64) return;
     aiTerminalInput.value = '';
-    appendAiMessage('user', query);
+    const label = query || '[图片分析]';
+    appendAiMessage('user', label, false, aiImageBase64);
     const aiMsgEl = appendAiMessage('ai', '', true);
-    sendAiChat(query, aiMsgEl);
+    sendAiChat(query || '描述这张图片', aiMsgEl);
   }
 });
 
@@ -382,7 +441,7 @@ async function sendAiChat(message, targetEl) {
     const res = await fetch(CHAT_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, model: currentModel }),
+      body: JSON.stringify({ message, model: currentModel, image: aiImageBase64 }),
     });
 
     if (!res.ok) {

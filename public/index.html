@@ -271,12 +271,26 @@
           <!-- 动态填充 -->
         </div>
       </div>
+      <!-- 图片预览区 -->
+      <div id="ai-image-preview" class="hidden px-4 pt-2 flex items-center gap-2">
+        <div class="relative">
+          <img id="ai-image-preview-img" src="" alt="preview" class="max-h-24 rounded-lg border border-white/10" />
+          <button id="ai-image-remove" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600">✕</button>
+        </div>
+        <span class="text-white/30 text-xs font-mono">图片已附加（将使用视觉模型分析）</span>
+      </div>
       <!-- 输入栏 -->
       <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2">
         <span class="text-violet-400 font-mono text-sm flex-shrink-0">❯</span>
         <input id="ai-terminal-input" type="text"
                class="flex-1 bg-transparent text-white/80 text-sm outline-none font-mono placeholder:text-white/20"
                placeholder="继续对话… (Enter 发送, Esc 关闭)" />
+        <input type="file" id="ai-image-input" accept="image/*" class="hidden" />
+        <button id="ai-image-btn" class="text-white/30 hover:text-white/60 transition-colors flex-shrink-0" title="上传图片 (也可 Ctrl+V 粘贴)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
