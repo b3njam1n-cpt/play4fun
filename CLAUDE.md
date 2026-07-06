@@ -26,7 +26,8 @@
 | `src/db/schema.sql` | D1 建表 |
 | `src/db/local-store.ts` | 本地内存数据库（含 User + Session） |
 | `public/index.html` | 前端主页面 |
-| `public/app.js` | 前端逻辑（当前 v3） |
+| `public/app.js` | 前端逻辑（当前 v4） |
+| `server.js` | Node.js 本地开发入口（`npx tsx server.js`，端口 3000） |
 | `test-smoke.mjs` | 本地冒烟测试（Node.js，不依赖 Wrangler） |
 | `docs/` | **所有设计文档、API 文档、路线图** |
 
@@ -34,16 +35,26 @@
 
 - ✅ Phase 1 MVP 核心完成（注册/登录/登出/获取用户 + JWT 中间件 + Session 管理）
 - ✅ fun-2 分支：修复 7 个注册/登录问题（响应格式统一、display_name、Session、常量提取、按钮防抖）
-- ⬜ 下一步：合并 fun-2 → master → wrangler login → 创建 D1 → 部署上线
+- ✅ fun-3 分支：登录后主页 + 本地开发环境（`npx tsx server.js` :3000，自动种子用户）
+- ⬜ 下一步：合并 fun-2 → master → fun-3 → master，然后 wrangler login → 创建 D1 → 部署上线
 - 📋 完整路线图见 `docs/04-roadmap.md`
 
 ## 开发命令
 
 ```bash
-npm run dev      # 启动本地开发服务器 :8787
-npm run build    # TypeScript 类型检查
-npm run deploy   # 部署到 Cloudflare
+npx tsx server.js # 启动本地开发服务器 :3000（推荐，自动创建测试用户）
+npm run dev       # Wrangler 开发服务器 :8787（需要 Node >= 22）
+npm run build     # TypeScript 类型检查
+npm run deploy    # 部署到 Cloudflare
 ```
+
+## 测试用户
+
+| 邮箱 | 密码 | 昵称 |
+|------|------|------|
+| `test@example.com` | `test1234` | Tester |
+
+> 启动 `npx tsx server.js` 后自动创建。
 
 ## 最近决策
 
@@ -54,8 +65,8 @@ npm run deploy   # 部署到 Cloudflare
 | 2026-07-06 | 建立多设备 AI 协作体系 | 台式机+笔记本双设备开发，需要上下文传递机制 |
 | 2026-07-06 | fun-2: 统一注册/登录响应为 `{ token, user }` | 之前注册返回 `{ id, email }` 登录返回 `{ token, user: {...} }`，不一致 |
 | 2026-07-06 | fun-2: JWT 增加 jti 声明 + Session 表写入 | 为服务端登出和多设备会话管理打基础 |
-| 2026-07-06 | fun-2: 注册支持 display_name（可选） | 前端已有用户名输入框但一直未使用 |
-| 2026-07-06 | fun-2: 提取 `src/utils/constants.ts` 共享常量 | 消除 JWT_SECRET 回退值在两处硬编码的重复 |
+| 2026-07-06 | fun-3: 登录后主页 + 本地开发环境 | `npx tsx server.js` 在 :3000 运行，种子测试用户，解决 Node 下 c.env 缺失 |
+| 2026-07-06 | 分支命名规范：每次大变动新分支 fun-N（N 递增） | 便于回溯和 PR 隔离 |
 
 ## 重要规则
 

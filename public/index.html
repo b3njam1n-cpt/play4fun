@@ -26,10 +26,10 @@
   </div>
 
   <!-- ============================================================ -->
-  <!-- Hero 区域："Let's Play" 手绘字 + 笑脸                           -->
+  <!-- 未登录 Hero 区域："Let's Play" 手绘字                          -->
   <!-- 手机: 全屏居中 | 桌面: 左侧对齐，避让右侧登录面板              -->
   <!-- ============================================================ -->
-  <div class="fixed inset-0 z-10 flex items-center justify-center pointer-events-none
+  <div id="hero-section" class="fixed inset-0 z-10 flex items-center justify-center pointer-events-none
               md:justify-start md:pr-[40vw] lg:pr-[380px]">
     <div class="flex flex-col items-center px-6 md:pl-8">
       <img
@@ -38,6 +38,22 @@
         class="w-full max-w-[280px] sm:max-w-[360px] md:max-w-[640px]"
         style="filter: drop-shadow(0 0 24px rgba(0,0,0,0.4));"
       />
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 已登录主页                                                    -->
+  <!-- ============================================================ -->
+  <div id="homepage" class="fixed inset-0 z-10 hidden">
+    <div class="absolute top-20 left-6 md:left-12 md:top-24">
+      <h1 class="text-white text-2xl md:text-5xl font-bold tracking-tight drop-shadow-lg">
+        <span id="welcome-prefix">欢迎</span>
+        <span id="welcome-name" class="bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent drop-shadow-lg">用户</span>
+        <span id="welcome-suffix">来我们的 playground</span>
+      </h1>
+      <p class="text-white/50 text-sm md:text-base mt-3 md:mt-4 tracking-wide" id="homepage-subtitle">
+        这里什么都有，也什么都没有——剩下的等待你来定义。
+      </p>
     </div>
   </div>
 
@@ -226,6 +242,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 </html>
