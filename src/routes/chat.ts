@@ -28,14 +28,14 @@ type ModelKey = keyof typeof MODELS;
 // ── POST /api/chat（SSE 流式）───────────────────
 
 chatRoutes.post('/chat', async (c) => {
-  let body: { message?: string; model?: string; image?: string };
+  let body: { message?: string; model?: string; image?: string; history?: {role:string;content:string}[] };
   try {
     body = await c.req.json();
   } catch {
     return c.json({ success: false, message: 'invalid_json' }, 400);
   }
 
-  const { message, model, image } = body;
+  const { message, model, image, history } = body;
   const hasImage = image && typeof image === 'string' && image.length > 0;
   const prompt = (message && typeof message === 'string' && message.trim()) || (hasImage ? '描述这张图片' : '');
 
@@ -53,9 +53,9 @@ chatRoutes.post('/chat', async (c) => {
 
       try {
         if (hasImage) {
-          await streamVision(prompt, image!, enqueue, c.env);
+          await streamVision(prompt, image!, history, enqueue, c.env);
         } else {
-          await streamLlama(prompt, enqueue, c.env);
+          await streamLlama(prompt, history, enqueue, c.env);
         }
         enqueue('done', '{}');
       } catch (e: any) {
@@ -88,34 +88,21 @@ chatRoutes.post('/chat', async (c) => {
 
 // ── Vision 流式（LLaVA，图片分析）───────────────
 
-// base64 → 字节数组（Workers AI 需要字节数组，不是 base64 字符串）
-function base64ToBytes(b64: string): number[] {
-  // Node.js: 用 Buffer；Workers/浏览器: 用 atob
-  const g: any = globalThis;
-  if (g.Buffer) {
-    return Array.from(g.Buffer.from(b64, 'base64'));
-  }
-  const bin = g.atob(b64);
-  const bytes: number[] = [];
-  for (let i = 0; i < bin.length; i++) bytes.push(bin.charCodeAt(i));
-  return bytes;
-}
-
 async function streamVision(
   message: string,
   imageBase64: string,
+  history: {role:string;content:string}[] | undefined,
   enqueue: (type: string, data: string) => void,
   env: AppEnv['Bindings'],
 ) {
   const modelId = MODELS.vision.id;
-  const imageArray = base64ToBytes(imageBase64);
-  // Llama 3.2 Vision 使用 messages 格式，image 为字节数组
+  // Llama 3.2 Vision 使用 image_url + base64 data URL 格式
   const input = {
     messages: [{
       role: 'user',
       content: [
         { type: 'text', text: message },
-        { type: 'image', image: imageArray },
+        { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + imageBase64 } },
       ],
     }],
   };
@@ -160,13 +147,22 @@ async function streamVision(
 
 async function streamLlama(
   message: string,
+  history: {role:string;content:string}[] | undefined,
   enqueue: (type: string, data: string) => void,
   env: AppEnv['Bindings'],
 ) {
+  // 构建消息：语言指令 + 历史 + 当前
+  const sysMsg = 'Reply in the same language as the user. 用用户使用的语言回复。';
+  const messages = [
+    { role: 'system', content: sysMsg },
+    ...(history || []).slice(-20),
+    { role: 'user', content: message },
+  ];
+
   // 方案 A：Cloudflare Workers 环境 → AI binding
   if (env.AI && typeof env.AI.run === 'function') {
     const stream = (await env.AI.run(MODELS.llama.id, {
-      messages: [{ role: 'user', content: message }],
+      messages,
       stream: true,
     })) as ReadableStream;
 
@@ -214,7 +210,7 @@ async function streamLlama(
       'Authorization': `Bearer ${apiToken}`,
     },
     body: JSON.stringify({
-      messages: [{ role: 'user', content: message }],
+      messages,
       stream: true,
     }),
   });
