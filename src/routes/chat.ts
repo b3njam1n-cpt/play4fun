@@ -8,11 +8,24 @@ export const chatRoutes = new Hono<AppEnv>();
 // deepseek 暂时禁用（API 消费），需要时取消注释即可恢复
 // const MODELS_DEEPSEEK = { ... };
 
+// ── Gemini AI Gateway ──────────────────────────────
+// Cloudflare AI Gateway 绕过 Google 对香港 IP 的地区封禁。
+// 已配置 Gateway 时走 CF 内部网络（Google 看到 CF 美国 IP），
+// 未配置时回退到直连。
+function getGeminiEndpoint(env: AppEnv['Bindings']): string {
+  const accountId = env.CF_LOCAL_ACCOUNT_ID;
+  const gatewayId = env.CF_AI_GATEWAY_ID;
+  if (accountId && gatewayId) {
+    return `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/google-ai-studio/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
+  }
+  return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse';
+}
+
 const MODELS = {
   gemini: {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse',
+    endpoint: getGeminiEndpoint,
   },
   llama: {
     id: '@cf/meta/llama-3.1-8b-instruct-fp8',
@@ -124,22 +137,27 @@ async function streamGemini(
     generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
   });
 
+  const endpoint = MODELS.gemini.endpoint(env);
+
   // 最多重试 3 次，应对 503/429 等临时错误
+  // 注意：AI Gateway 模式下不再出现地区封禁错误
   let res: Response | undefined;
   let lastError = '';
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
-    res = await fetch(MODELS.gemini.endpoint, {
+    const fetchHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-goog-api-key': apiKey,
+    };
+    res = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-goog-api-key': apiKey,
-      },
+      headers: fetchHeaders,
       body,
-      cf: { requestPriority: 'weight=192' } as any,
     });
-    if (res.ok || (res.status !== 503 && res.status !== 400)) break;
-    lastError = '503';
+    if (res.ok) break;
+    // 只在临时错误时重试（503 服务不可用、429 限流）
+    if (res.status !== 503 && res.status !== 429) break;
+    lastError = 'retry_' + res.status;
   }
 
   if (!res || !res.ok) {
