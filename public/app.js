@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // Play4Fun — Frontend Logic v5
 // ============================================================
 console.log('🚀 app.js v5 已加载');
@@ -87,6 +87,14 @@ const aiImagePreview = document.getElementById('ai-image-preview');
 const aiImagePreviewImg = document.getElementById('ai-image-preview-img');
 const aiImageRemove = document.getElementById('ai-image-remove');
 let aiImageBase64 = null;
+// 忘记密码面板元素
+const forgotEmail = document.getElementById('forgot-email');
+const forgotUsername = document.getElementById('forgot-username');
+const forgotPassword = document.getElementById('forgot-password');
+const btnForgotSubmit = document.getElementById('btn-forgot-submit');
+const forgotError = document.getElementById('forgot-error');
+const forgotSuccess = document.getElementById('forgot-success');
+const panelForgotForm = document.getElementById('panel-forgot-form');
 let aiHistory = []; // 对话历史 [{role, content}]
 
 // ── 模型 ────────────────────────────────────────
