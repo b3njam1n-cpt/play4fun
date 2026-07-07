@@ -452,12 +452,15 @@ document.addEventListener('keydown', (e) => {
     }
   });
 
-  // ── 重置窗口位置（关闭时调用） ──
+  // ── 重置窗口位置（关闭时 / 打开时调用） ──
   window.resetTerminalPosition = function () {
     if (!win) return;
     win.style.position = ''; win.style.left = ''; win.style.top = '';
     win.style.margin = ''; win.style.transform = '';
-    win.style.width = ''; win.style.height = '';
+    // 固定初始尺寸：680x480，防止内容自动撑大
+    const h = clamp(window.innerHeight * 0.7, 400, 600);
+    win.style.width = '680px';
+    win.style.height = h + 'px';
     win.style.cursor = '';
     win.dataset.maxed = '0';
   };
