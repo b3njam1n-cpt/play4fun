@@ -336,15 +336,8 @@ function closeAiTerminal() {
   resetTerminalPosition();
 }
 
+// 仅红色按钮关闭终端（遮罩点击、Esc 均不关闭）
 document.getElementById('ai-terminal-close')?.addEventListener('click', closeAiTerminal);
-aiTerminal?.addEventListener('click', (e) => {
-  if (e.target !== aiTerminal) return;
-  if (aiTerminal.dataset.wasDragged === '1') { delete aiTerminal.dataset.wasDragged; return; }
-  closeAiTerminal();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && aiTerminal && aiTerminal.style.display !== 'none') closeAiTerminal();
-});
 
 // ══════════════════════════════════════════════════
 // AI 终端：拖拽标题栏 + 边缘调整大小
@@ -428,6 +421,7 @@ document.addEventListener('keydown', (e) => {
     if (!win.style.display || win.style.display === 'none') return;
     const d = getResizeDir(e);
     overlay.style.cursor = CURSORS[d] || '';
+    win.style.cursor = CURSORS[d] || '';
   });
 
   // ── mousedown：开始调整大小 ──
