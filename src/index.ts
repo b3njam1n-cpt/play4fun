@@ -27,6 +27,7 @@ app.use('*', async (c, next) => {
       GEMINI_API_KEY: processEnv.GEMINI_API_KEY,
       CF_LOCAL_ACCOUNT_ID: processEnv.CF_LOCAL_ACCOUNT_ID,
       CF_LOCAL_API_TOKEN: processEnv.CF_LOCAL_API_TOKEN,
+      CF_ACCOUNT_ID: processEnv.CF_ACCOUNT_ID,
       CF_AI_GATEWAY_ID: processEnv.CF_AI_GATEWAY_ID,
       AI: undefined,
     };
