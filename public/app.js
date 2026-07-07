@@ -316,6 +316,7 @@ let isAiStreaming = false;
 
 function openAiTerminal(query) {
   if (!aiTerminal || !aiTerminalContent) return;
+  resetTerminalPosition();
   aiTerminal.style.display = 'flex';
   aiTerminalContent.innerHTML = '';
   aiHistory = [];
@@ -331,6 +332,8 @@ function closeAiTerminal() {
   if (aiTerminalInput) aiTerminalInput.value = '';
   aiHistory = [];
   isAiStreaming = false;
+  // 重置窗口位置和尺寸
+  resetTerminalPosition();
 }
 
 document.getElementById('ai-terminal-close')?.addEventListener('click', closeAiTerminal);
@@ -338,6 +341,127 @@ aiTerminal?.addEventListener('click', (e) => { if (e.target === aiTerminal) clos
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && aiTerminal && aiTerminal.style.display !== 'none') closeAiTerminal();
 });
+
+// ══════════════════════════════════════════════════
+// AI 终端：拖拽标题栏 + 边缘调整大小
+// ══════════════════════════════════════════════════
+(function initTerminalDragResize() {
+  const overlay = document.getElementById('ai-terminal');
+  const win = document.getElementById('ai-terminal-window');
+  if (!overlay || !win) return;
+
+  const titlebar = win.querySelector('.flex.items-center.justify-between');
+  if (!titlebar) return;
+
+  let dragging = false, resizing = false, resizeDir = '';
+  let startX, startY, startW, startH, startLeft, startTop;
+
+  const MIN_W = 360, MIN_H = 280, EDGE = 6;
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(v, max)); }
+
+  // ── 标题栏拖拽 ──
+  titlebar.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('#ai-terminal-close') || e.target.closest('button')) return;
+    dragging = true;
+    const rect = win.getBoundingClientRect();
+    startX = e.clientX; startY = e.clientY;
+    startLeft = rect.left; startTop = rect.top;
+    win.style.position = 'absolute';
+    win.style.left = startLeft + 'px';
+    win.style.top = startTop + 'px';
+    win.style.margin = '0';
+    win.style.transform = 'none';
+    e.preventDefault();
+  });
+
+  // ── 边缘检测 ──
+  function getResizeDir(e) {
+    const r = win.getBoundingClientRect();
+    const onR = e.clientX > r.right - EDGE && e.clientX < r.right + EDGE;
+    const onB = e.clientY > r.bottom - EDGE && e.clientY < r.bottom + EDGE;
+    if (onR && onB) return 'se';
+    if (onR && e.clientY > r.top + 36) return 'e';
+    if (onB && e.clientX > r.left + 8) return 's';
+    return '';
+  }
+
+  // ── mousemove：拖拽 / 调整大小 / 光标更新 ──
+  document.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      win.style.left = clamp(startLeft + dx, -50, window.innerWidth - 100) + 'px';
+      win.style.top = clamp(startTop + dy, 0, window.innerHeight - 40) + 'px';
+      return;
+    }
+    if (resizing) {
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (resizeDir.includes('e')) win.style.width = clamp(startW + dx, MIN_W, window.innerWidth * 0.95) + 'px';
+      if (resizeDir.includes('s')) win.style.height = clamp(startH + dy, MIN_H, window.innerHeight * 0.92) + 'px';
+      return;
+    }
+    if (!win.style.display || win.style.display === 'none') return;
+    const d = getResizeDir(e);
+    win.style.cursor = d === 'se' ? 'nwse-resize' : d === 'e' ? 'ew-resize' : d === 's' ? 'ns-resize' : '';
+  });
+
+  // ── mousedown：开始调整大小 ──
+  overlay.addEventListener('mousedown', (e) => {
+    if (e.target === overlay) return;
+    const d = getResizeDir(e);
+    if (d) {
+      resizing = true; resizeDir = d;
+      startX = e.clientX; startY = e.clientY;
+      startW = win.offsetWidth; startH = win.offsetHeight;
+      win.style.position = 'absolute';
+      const rect = win.getBoundingClientRect();
+      win.style.left = rect.left + 'px';
+      win.style.top = rect.top + 'px';
+      win.style.margin = '0';
+      win.style.transform = 'none';
+      e.preventDefault(); e.stopPropagation();
+    }
+  });
+
+  // ── mouseup：结束 ──
+  document.addEventListener('mouseup', () => {
+    dragging = false; resizing = false; resizeDir = '';
+    if (win.style.cursor) win.style.cursor = '';
+  });
+
+  // ── 双击标题栏：最大化 / 还原 ──
+  titlebar.addEventListener('dblclick', (e) => {
+    if (e.target.closest('#ai-terminal-close') || e.target.closest('button')) return;
+    const maxed = win.dataset.maxed === '1';
+    if (maxed) {
+      win.style.width = win.dataset.prevW || '640px';
+      win.style.height = win.dataset.prevH || '500px';
+      win.style.position = ''; win.style.left = ''; win.style.top = '';
+      win.style.margin = ''; win.style.transform = '';
+      win.dataset.maxed = '0';
+    } else {
+      win.dataset.prevW = win.offsetWidth;
+      win.dataset.prevH = win.offsetHeight;
+      win.style.position = 'absolute';
+      win.style.left = '2.5vw'; win.style.top = '10px';
+      win.style.margin = '0'; win.style.transform = 'none';
+      win.style.width = (window.innerWidth * 0.95) + 'px';
+      win.style.height = (window.innerHeight * 0.92) + 'px';
+      win.dataset.maxed = '1';
+    }
+  });
+
+  // ── 重置窗口位置（关闭时调用） ──
+  window.resetTerminalPosition = function () {
+    if (!win) return;
+    win.style.position = ''; win.style.left = ''; win.style.top = '';
+    win.style.margin = ''; win.style.transform = '';
+    win.style.width = ''; win.style.height = '';
+    win.style.cursor = '';
+    win.dataset.maxed = '0';
+  };
+})();
 
 // ── 图片处理 ────────────────────────────────────
 function handleImageFile(file) {

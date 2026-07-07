@@ -13,7 +13,7 @@ export const chatRoutes = new Hono<AppEnv>();
 // 已配置 Gateway 时走 CF 内部网络（Google 看到 CF 美国 IP），
 // 未配置时回退到直连。
 function getGeminiEndpoint(env: AppEnv['Bindings']): string {
-  const accountId = env.CF_LOCAL_ACCOUNT_ID;
+  const accountId = env.CF_LOCAL_ACCOUNT_ID || env.CF_ACCOUNT_ID;
   const gatewayId = env.CF_AI_GATEWAY_ID;
   if (accountId && gatewayId) {
     return `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/google-ai-studio/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse`;
