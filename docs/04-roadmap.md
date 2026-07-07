@@ -55,12 +55,30 @@
 
 ## Phase 4: 运维 + 扩展
 
-> 目标：生产级部署，双平台兼容
+> 目标：生产级部署，双平台兼容，远程访问家庭电脑
 
-- [ ] Cloudflare Tunnel 内网穿透
+- [ ] Cloudflare Tunnel 内网穿透（连接家庭电脑到 CF 边缘网络）
 - [ ] Docker 容器化
 - [ ] docker-compose 本地编排
 - [ ] Oracle Cloud 部署适配
+
+### 4.1 远程家庭电脑访问
+
+> 架构：浏览器 → vieplay4fun.win → Cloudflare Tunnel → 家中电脑
+> 每个用户可通过命令行启动一个网页终端，访问自己家庭电脑
+
+- [ ] 家中电脑安装 `cloudflared`（轻量代理，CPU 占用 < 1%）
+- [ ] ttyd / wetty：把 SSH 终端变成网页（WebSocket）
+- [ ] Cloudflare Tunnel 代理到 Worker → 用户浏览器
+- [ ] 两种模式可选：
+  - **终端模式**：类似 Linux 命令行，文件操作、运行脚本（推荐先做）
+  - **桌面模式**：VNC/NoVNC 远程桌面（延迟高、带宽大，远期再做）
+- [ ] 权限隔离：仅登录用户可访问自己的电脑
+- [ ] D1 记录连接状态（在线/离线、上次连接时间）
+
+> **技术难度**：终端模式约 4h | 桌面模式额外 8h
+> **关键依赖**：家中电脑需要开机 + 联网（可配合 Wake-on-LAN）
+
 - [ ] PostgreSQL 迁移（D1 → PG）
 - [ ] 监控 + 日志
 
