@@ -118,12 +118,20 @@ button {
 
 #ai-terminal-window {
   animation: ai-terminal-scalein 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  resize: both;
-  overflow: auto;
+  position: relative;
+  overflow: visible;
   min-width: 360px;
   min-height: 280px;
-  max-width: 95vw;
-  max-height: 95vh;
+}
+/* 右下角拖拽手柄 */
+#ai-terminal-window::after {
+  content: '';
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 16px; height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.15) 50%);
+  border-radius: 0 0 8px 0;
 }
 
 @keyframes ai-terminal-scalein {
