@@ -95,7 +95,7 @@ const btnForgotSubmit = document.getElementById('btn-forgot-submit');
 const forgotError = document.getElementById('forgot-error');
 const forgotSuccess = document.getElementById('forgot-success');
 const panelForgotForm = document.getElementById('panel-forgot-form');
-let aiHistory = []; // 对话历史 [{role, content}]
+let aiHistory = [];
 
 // ── 模型 ────────────────────────────────────────
 const models = {
@@ -239,7 +239,74 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-forgot').addEventListener('click', () => {
-  alert(lang === 'zh' ? '请联系管理员重置密码' : 'Please contact admin for password reset');
+  panelLoginForm.classList.add('hidden');
+  panelRegisterForm.classList.add('hidden');
+  panelForgotForm.classList.remove('hidden');
+  panelLabel.textContent = lang === 'zh' ? '重置密码' : 'Reset Password';
+  loginError.classList.add('hidden');
+  forgotError.classList.add('hidden');
+  forgotSuccess.classList.add('hidden');
+});
+document.getElementById('btn-forgot-back').addEventListener('click', () => {
+  panelForgotForm.classList.add('hidden');
+  panelRegisterForm.classList.add('hidden');
+  panelLoginForm.classList.remove('hidden');
+  panelLabel.textContent = tl('loginLabel');
+  forgotError.classList.add('hidden');
+  forgotSuccess.classList.add('hidden');
+});
+btnForgotSubmit.addEventListener('click', async () => {
+  forgotError.classList.add('hidden');
+  forgotSuccess.classList.add('hidden');
+  const email = forgotEmail.value.trim();
+  const username = forgotUsername.value.trim();
+  const newPassword = forgotPassword.value;
+  if (!email || !username || !newPassword) {
+    showError(forgotError, lang === 'zh' ? '请填写所有字段' : 'Please fill in all fields'); return;
+  }
+  if (newPassword.length < 8) {
+    showError(forgotError, lang === 'zh' ? '密码至少需要 8 位' : 'Password must be at least 8 characters'); return;
+  }
+  lockButton(btnForgotSubmit, lang === 'zh' ? '提交中...' : 'Submitting...');
+  try {
+    const res = await fetch(API_BASE + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, username, new_password: newPassword }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msgs = {
+        user_not_found: lang === 'zh' ? '用户不存在' : 'User not found',
+        username_mismatch: lang === 'zh' ? '用户名不匹配' : 'Username mismatch',
+        email_invalid: lang === 'zh' ? '邮箱格式无效' : 'Invalid email format',
+      };
+      showError(forgotError, msgs[data.error?.code] || data.message);
+      unlockButton(btnForgotSubmit); return;
+    }
+    forgotSuccess.textContent = lang === 'zh' ? '密码修改成功！返回登录...' : 'Password reset! Redirecting...';
+    forgotSuccess.classList.remove('hidden');
+    forgotEmail.value = ''; forgotUsername.value = ''; forgotPassword.value = '';
+    setTimeout(() => {
+      panelForgotForm.classList.add('hidden');
+      panelLoginForm.classList.remove('hidden');
+      panelLabel.textContent = tl('loginLabel');
+      forgotSuccess.classList.add('hidden');
+    }, 1500);
+  } catch {
+    showError(forgotError, lang === 'zh' ? '网络错误' : 'Network error');
+  }
+  unlockButton(btnForgotSubmit);
+});
+document.getElementById('btn-home-signout')?.addEventListener('click', async () => {
+  await fetch(API_BASE + '/logout', { method: 'POST', credentials: 'include' });
+  homepage?.classList.add('hidden');
+  heroSection?.classList.remove('hidden');
+  panelLoggedIn.classList.add('hidden');
+  panelLoginForm.classList.remove('hidden');
+  panelRegisterForm.classList.add('hidden');
+  if (loginPanel) loginPanel.classList.remove('hidden');
+  panelLabel.textContent = tl('loginLabel');
 });
 
 // ══════════════════════════════════════════════════
