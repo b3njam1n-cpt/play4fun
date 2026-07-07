@@ -55,6 +55,11 @@
         这里什么都有，也什么都没有——剩下的等待你来定义。
       </p>
     </div>
+    <!-- 左下角登出按钮 -->
+    <button id="btn-home-signout" class="absolute bottom-8 left-6 md:left-12 px-5 py-2.5 rounded-full text-sm font-medium
+                   bg-white/5 border border-white/10 text-white/50 hover:text-red-400 hover:border-red-400/30 transition-all">
+      退出登录
+    </button>
   </div>
 
   <!-- ============================================================ -->
@@ -207,6 +212,31 @@
 
         <div class="flex items-center justify-center mt-3">
           <button id="btn-login-toggle" class="flex-1 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white/90 transition-all ghost-btn">
+            ← 返回登录
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 忘记密码表单（默认隐藏） ── -->
+      <div id="panel-forgot-form" class="hidden w-full max-w-[320px] mx-auto md:mx-0">
+        <p class="text-white/30 text-[11px] font-medium tracking-[0.15em] uppercase mb-5">重置密码</p>
+
+        <input id="forgot-email" type="email" placeholder="邮箱"
+               class="w-full rounded-xl px-4 py-3 md:py-2.5 text-sm md:text-base text-white placeholder:text-white/30 outline-none transition-all bg-white/5 border border-white/10 focus:border-violet-400/50 focus:bg-white/10 mb-3" />
+        <input id="forgot-username" type="text" placeholder="用户名"
+               class="w-full rounded-xl px-4 py-3 md:py-2.5 text-sm md:text-base text-white placeholder:text-white/30 outline-none transition-all bg-white/5 border border-white/10 focus:border-violet-400/50 focus:bg-white/10 mb-3" />
+        <input id="forgot-password" type="password" placeholder="新密码（至少 8 位）"
+               class="w-full rounded-xl px-4 py-3 md:py-2.5 text-sm md:text-base text-white placeholder:text-white/30 outline-none transition-all bg-white/5 border border-white/10 focus:border-violet-400/50 focus:bg-white/10 mb-5" />
+
+        <button id="btn-forgot-submit" class="w-full py-3 md:py-2.5 rounded-full text-sm font-bold text-black bg-white hover:bg-white/90 active:scale-[0.97] transition-all">
+          修改密码
+        </button>
+
+        <p id="forgot-error" class="text-red-300 text-xs mt-2 text-center hidden"></p>
+        <p id="forgot-success" class="text-emerald-300 text-xs mt-2 text-center hidden"></p>
+
+        <div class="flex items-center justify-center mt-3">
+          <button id="btn-forgot-back" class="flex-1 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white/90 transition-all ghost-btn">
             ← 返回登录
           </button>
         </div>

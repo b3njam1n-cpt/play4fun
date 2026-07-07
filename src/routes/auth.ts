@@ -277,6 +277,59 @@ authRoutes.post('/logout', async (c) => {
   return success(c, null, '已登出');
 });
 
+// ── POST /auth/reset-password ───────────────────
+
+const resetPasswordSchema = z.object({
+  email: z.string().email('email_invalid'),
+  new_password: z.string().min(8, 'password_too_short'),
+  username: z.string().min(1, 'username_required'),
+});
+
+authRoutes.post('/reset-password', async (c) => {
+  let body: unknown;
+  try { body = await c.req.json(); } catch {
+    return error(c, 400, 'invalid_json', {});
+  }
+
+  const result = resetPasswordSchema.safeParse(body);
+  if (!result.success) {
+    const firstIssue = result.error.issues[0];
+    return error(c, 400, firstIssue.message, { field: firstIssue.path.join('.') });
+  }
+
+  const { email, new_password, username } = result.data;
+
+  // 查找用户（必须邮箱 + 用户名都匹配）
+  const user = await findUserByEmail(email, c.env.DB);
+  if (!user || !user.password_hash) {
+    return error(c, 404, 'user_not_found', {});
+  }
+
+  // 验证用户名
+  if (user.display_name !== username) {
+    return error(c, 401, 'username_mismatch', {});
+  }
+
+  // 更新密码
+  const now = Math.floor(Date.now() / 1000);
+  const passwordHash = await bcrypt.hash(new_password, BCRYPT_COST);
+
+  if (c.env.DB) {
+    await c.env.DB.prepare(
+      'UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?'
+    ).bind(passwordHash, now, user.id).run();
+  }
+
+  // 同步更新本地存储
+  const localUser = localDB.getUserById(user.id);
+  if (localUser) {
+    localUser.password_hash = passwordHash;
+    localUser.updated_at = now;
+  }
+
+  return success(c, null, '密码修改成功，请重新登录');
+});
+
 // ── GET /auth/me ────────────────────────────────
 
 authRoutes.get('/me', requireAuth, async (c) => {
