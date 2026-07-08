@@ -19,6 +19,7 @@ export interface AppEnv {
   };
   Variables: {
     userId?: string;     // JWT 中间件注入当前用户 ID
+    userRole?: string;   // Admin 中间件注入角色 'user' | 'admin'
   };
 }
 

@@ -40,7 +40,11 @@ const MIME = {
 };
 
 function servePublic(pathname) {
-  const filename = pathname === '/' ? '/index.html' : pathname;
+  let filename = pathname === '/' ? '/index.html' : pathname;
+  // /admin → /admin.html
+  if (filename === '/admin' || filename === '/admin/') {
+    filename = '/admin.html';
+  }
   const filePath = join('./public', filename);
 
   if (!filePath.startsWith('public')) return null;
@@ -76,6 +80,7 @@ async function seedTestUser() {
     email: testEmail,
     password_hash: passwordHash,
     provider: 'email',
+    role: 'admin',  // 测试用户为管理员
     google_id: null,
     github_id: null,
     display_name: testName,
@@ -84,10 +89,11 @@ async function seedTestUser() {
     updated_at: now,
   });
 
-  console.log(`✅ 测试用户已创建:`);
+  console.log(`✅ 管理员测试用户已创建:`);
   console.log(`   📧 邮箱: ${testEmail}`);
   console.log(`   🔑 密码: ${testPassword}`);
   console.log(`   👤 昵称: ${testName}`);
+  console.log(`   🛡️  角色: admin`);
 }
 
 // ── 启动 ────────────────────────────────────────

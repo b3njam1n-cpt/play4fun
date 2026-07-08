@@ -1,0 +1,22 @@
+# play4fun - 分支预览 Worker 配置
+# 与 wrangler.toml 相同但无 routes，路由在 CI 中通过 --route 动态添加
+name = "play4fun"
+main = "src/index.ts"
+compatibility_date = "2025-07-05"
+
+[assets]
+directory = "./public"
+
+[placement]
+mode = "smart"
+
+[vars]
+ENVIRONMENT = "development"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "play4fun-db"
+database_id = "7059f459-8f84-4ab1-8d8a-789bd6a6b218"
