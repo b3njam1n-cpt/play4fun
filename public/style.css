@@ -189,3 +189,43 @@ button {
 @media (max-width: 480px) {
   #model-selector #model-name { display: none; }
 }
+
+/* ── 移动端全局适配 ─────────────────────────── */
+@media (max-width: 767px) {
+  /* 主页欢迎语缩小 */
+  #homepage h1 { font-size: 1.25rem !important; line-height: 1.4 !important; }
+  #homepage .md\:text-5xl { font-size: 1.25rem !important; }
+  #homepage p { font-size: 0.75rem !important; margin-top: 0.5rem !important; }
+  #homepage .top-20 { top: 4rem !important; }
+  #homepage .left-6 { left: 1rem !important; }
+  #homepage .left-12 { left: 1rem !important; }
+  /* 登出按钮更小 */
+  #btn-home-signout { bottom: 1.5rem !important; left: 1rem !important; font-size: 0.75rem !important; padding: 0.5rem 1rem !important; }
+
+  /* AI 终端全屏 */
+  #ai-terminal.p-4 { padding: 0 !important; }
+  #ai-terminal.p-8 { padding: 0 !important; }
+  #ai-terminal-window {
+    border-radius: 0 !important;
+    border: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+  }
+  #ai-terminal-input { font-size: 16px !important; }
+  #ai-terminal-body { font-size: 13px !important; }
+
+  /* 登录面板 */
+  #login-panel > .relative { padding: 1rem 1rem 1.5rem 1rem !important; }
+  #panel-login-form, #panel-register-form, #panel-forgot-form, #panel-logged-in {
+    max-width: 100% !important;
+  }
+
+  /* 注册表单间距 */
+  .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-6 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+
+  /* Hero 图片缩小 */
+  #hero-section img { max-width: 200px !important; }
+}

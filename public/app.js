@@ -102,16 +102,20 @@ const models = {
   gemini: { name: 'Gemini', icon: '🧠' },
   llama: { name: 'Llama', icon: '🦙' },
 };
-let currentModel = 'gemini';
+let currentModel = 'llama';
 
 function switchModel() {
   const keys = Object.keys(models);
   const idx = keys.indexOf(currentModel);
   currentModel = keys[(idx + 1) % keys.length];
   const m = models[currentModel];
+  // 同步桌面端
   if (modelName) modelName.textContent = m.name;
   if (modelIcon) modelIcon.textContent = m.icon;
   if (aiTerminalModelBadge) aiTerminalModelBadge.textContent = m.name;
+  // 同步移动端
+  if (modelNameMobile) modelNameMobile.textContent = m.name;
+  if (modelIconMobile) modelIconMobile.textContent = m.icon;
 }
 if (modelSelector) modelSelector.addEventListener('click', switchModel);
 
@@ -138,6 +142,23 @@ searchInput?.addEventListener('keydown', (e) => {
 });
 searchInputMobile?.addEventListener('input', () => searchClearMobile?.classList.toggle('hidden', !searchInputMobile.value));
 searchClearMobile?.addEventListener('mousedown', (e) => { e.preventDefault(); searchInputMobile.value = ''; searchClearMobile.classList.add('hidden'); searchInputMobile.focus(); });
+// 手机端搜索 Enter → AI Chat
+searchInputMobile?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && searchInputMobile.value.trim()) {
+    openAiTerminal(searchInputMobile.value.trim());
+    searchInputMobile.value = ''; searchClearMobile?.classList.add('hidden');
+  }
+});
+
+// ── 移动端模型选择器（同步桌面端）──────────────
+const modelSelectorMobile = document.getElementById('model-selector-mobile');
+const modelNameMobile = document.getElementById('model-name-mobile');
+const modelIconMobile = document.getElementById('model-icon-mobile');
+modelSelectorMobile?.addEventListener('click', () => {
+  switchModel();
+  if (modelNameMobile) modelNameMobile.textContent = models[currentModel].name;
+  if (modelIconMobile) modelIconMobile.textContent = models[currentModel].icon;
+});
 
 // ── 语言切换 ────────────────────────────────────
 btnZh.addEventListener('click', () => setLang('zh'));
