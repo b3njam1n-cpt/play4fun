@@ -22,6 +22,8 @@ const t = {
     homepageSubtitle: '这里什么都有，也什么都没有——剩下的等待你来定义。',
     aiPlaceholder: '继续对话… (Enter 发送, Esc 关闭)',
     aiError: '出错了，请重试。',
+    adminMode: '管理模式',
+    noAccess: '无权访问',
   },
   en: {
     searchPlaceholder: 'Ask anything...',
@@ -37,6 +39,8 @@ const t = {
     homepageSubtitle: 'Everything here, and nothing here — the rest is up to you.',
     aiPlaceholder: 'Continue... (Enter to send, Esc to close)',
     aiError: 'Something went wrong. Try again.',
+    adminMode: 'Admin Mode',
+    noAccess: 'Access Denied',
   },
 };
 let lang = 'zh';
@@ -56,6 +60,8 @@ const searchInputMobile = document.getElementById('search-input-mobile');
 const searchClearMobile = document.getElementById('search-clear-mobile');
 const btnZh = document.getElementById('btn-zh');
 const btnEn = document.getElementById('btn-en');
+const btnAdmin = document.getElementById('btn-admin');
+const adminBtnText = document.getElementById('admin-btn-text');
 const panelLoginForm = document.getElementById('panel-login-form');
 const panelRegisterForm = document.getElementById('panel-register-form');
 const panelLoggedIn = document.getElementById('panel-logged-in');
@@ -188,6 +194,7 @@ function updateTexts() {
   if (welcomeSuffix) welcomeSuffix.textContent = tl('welcomeSuffix');
   if (homepageSubtitle) homepageSubtitle.textContent = tl('homepageSubtitle');
   if (aiTerminalInput) aiTerminalInput.placeholder = tl('aiPlaceholder');
+  if (adminBtnText) adminBtnText.textContent = tl('adminMode');
 }
 
 // ── 表单切换 ────────────────────────────────────
@@ -248,6 +255,18 @@ function showLoggedIn(user) {
   displayUsername.textContent = name; displayEmail.textContent = user.email;
   loginUsername.value = ''; loginPassword.value = '';
   registerUsername.value = ''; registerEmail.value = ''; registerPassword.value = '';
+
+  // Admin 按钮可见性
+  if (user.role === 'admin' && btnAdmin) {
+    btnAdmin.classList.remove('hidden');
+  }
+
+  // 登录后重定向
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect');
+  if (redirect && redirect.startsWith('/')) {
+    window.location.href = redirect;
+  }
 }
 
 document.getElementById('btn-logout').addEventListener('click', async () => {
@@ -256,6 +275,7 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
   panelLoggedIn.classList.add('hidden'); panelLoginForm.classList.remove('hidden');
   panelRegisterForm.classList.add('hidden');
   if (loginPanel) loginPanel.classList.remove('hidden');
+  if (btnAdmin) btnAdmin.classList.add('hidden');
   panelLabel.textContent = tl('loginLabel');
 });
 
@@ -327,6 +347,7 @@ document.getElementById('btn-home-signout')?.addEventListener('click', async () 
   panelLoginForm.classList.remove('hidden');
   panelRegisterForm.classList.add('hidden');
   if (loginPanel) loginPanel.classList.remove('hidden');
+  if (btnAdmin) btnAdmin.classList.add('hidden');
   panelLabel.textContent = tl('loginLabel');
 });
 

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 — Play4Fun</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans SC', 'DM Sans', sans-serif;
+      background: #0d0d1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .glass-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+    }
+    .btn-primary {
+      background: rgba(139,92,246,0.3);
+      border: 1px solid rgba(139,92,246,0.4);
+      color: #c4b5fd;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: rgba(139,92,246,0.45); border-color: rgba(139,92,246,0.6); }
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #fca5a5;
+      transition: all 0.2s;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.5); }
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.6);
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    table { border-collapse: separate; border-spacing: 0; }
+    th { font-weight: 500; color: rgba(255,255,255,0.35); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    td { border-top: 1px solid rgba(255,255,255,0.04); }
+    .badge-admin { background: rgba(139,92,246,0.2); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-user { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); }
+    .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    .toast { animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    input:focus, select:focus { outline: none; }
+    .tab-active { background: rgba(139,92,246,0.2) !important; color: #c4b5fd !important; border-color: rgba(139,92,246,0.4) !important; }
+    @media (max-width: 767px) {
+      .desktop-only { display: none !important; }
+      .card-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+    .spinner { animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="overflow-x-hidden">
+
+<!-- ============================================================ -->
+<!-- 无权访问 / 加载中                                            -->
+<!-- ============================================================ -->
+<div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center" style="background:#0d0d1a;">
+  <svg class="spinner w-8 h-8 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+  </svg>
+</div>
+
+<div id="denied-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center hidden" style="background:#0d0d1a;">
+  <div class="text-6xl mb-4">🚫</div>
+  <h1 class="text-white text-xl font-bold mb-2">无权访问</h1>
+  <p class="text-white/40 text-sm mb-6">你的账户没有管理员权限</p>
+  <a href="/" class="px-6 py-2 rounded-full text-sm font-semibold text-white bg-violet-500/30 border border-violet-400/40 hover:bg-violet-500/50 transition-all no-underline">返回首页</a>
+</div>
+
+<!-- ============================================================ -->
+<!-- 主界面                                                        -->
+<!-- ============================================================ -->
+<div id="main-app" class="hidden">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 glass border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-5 h-5 text-violet-400" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span class="text-white font-semibold text-sm">Play4Fun</span>
+        <span class="text-white/20">/</span>
+        <span class="text-violet-300 font-semibold text-sm">管理后台</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="header-admin-name" class="text-white/50 text-xs hidden md:inline">管理员</span>
+        <a href="/" class="btn-ghost px-3 py-1.5 rounded-full text-xs font-medium no-underline">← 返回主页</a>
+        <button id="btn-admin-logout" class="btn-ghost px-3 py-1.5 rounded-full text-xs font-medium">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 md:px-6 py-6">
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6" style="card-grid">
+      <div class="glass-card p-4 md:p-5">
+        <div class="text-white/30 text-[11px] uppercase tracking-wider mb-1">总用户</div>
+        <div class="text-2xl md:text-3xl font-bold text-white" id="stat-total">—</div>
+      </div>
+      <div class="glass-card p-4 md:p-5">
+        <div class="text-white/30 text-[11px] uppercase tracking-wider mb-1">今日新增</div>
+        <div class="text-2xl md:text-3xl font-bold text-emerald-400" id="stat-today">—</div>
+      </div>
+      <div class="glass-card p-4 md:p-5">
+        <div class="text-white/30 text-[11px] uppercase tracking-wider mb-1">管理员</div>
+        <div class="text-2xl md:text-3xl font-bold text-violet-400" id="stat-admin">—</div>
+      </div>
+      <div class="glass-card p-4 md:p-5">
+        <div class="text-white/30 text-[11px] uppercase tracking-wider mb-1">活跃会话</div>
+        <div class="text-2xl md:text-3xl font-bold text-amber-400" id="stat-sessions">—</div>
+      </div>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="flex items-center gap-2 mb-5">
+      <button class="tab-btn tab-active px-4 py-2 rounded-full text-xs font-semibold btn-ghost" data-tab="users">用户管理</button>
+      <button class="tab-btn px-4 py-2 rounded-full text-xs font-semibold btn-ghost" data-tab="logs">操作日志</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 用户管理 Tab                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="tab-users">
+      <!-- 搜索 + 新建 -->
+      <div class="flex items-center gap-3 mb-4 flex-wrap">
+        <div class="flex-1 min-w-[180px]">
+          <input id="search-input" type="text" placeholder="搜索邮箱或用户名…"
+                 class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/25 bg-white/5 border border-white/10 focus:border-violet-400/50 focus:bg-white/8 transition-all" />
+        </div>
+        <button id="btn-search" class="btn-primary px-4 py-2.5 rounded-full text-xs font-semibold">搜索</button>
+        <button id="btn-create-user" class="btn-primary px-4 py-2.5 rounded-full text-xs font-semibold">+ 新建用户</button>
+      </div>
+
+      <!-- 用户表格 -->
+      <div class="glass-card overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr>
+              <th class="text-left px-4 py-3 w-10">#</th>
+              <th class="text-left px-4 py-3">用户名</th>
+              <th class="text-left px-4 py-3">邮箱</th>
+              <th class="text-left px-4 py-3 desktop-only">注册时间</th>
+              <th class="text-left px-4 py-3">角色</th>
+              <th class="text-right px-4 py-3">操作</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="6" class="text-center py-12 text-white/20 text-sm">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div id="users-pagination" class="flex items-center justify-between mt-4 text-xs text-white/30">
+        <span id="pagination-info">—</span>
+        <div class="flex gap-2">
+          <button id="btn-prev-page" class="btn-ghost px-3 py-1.5 rounded-full disabled:opacity-30" disabled>← 上一页</button>
+          <button id="btn-next-page" class="btn-ghost px-3 py-1.5 rounded-full disabled:opacity-30" disabled>下一页 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 操作日志 Tab                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="tab-logs" class="hidden">
+      <div class="glass-card overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr>
+              <th class="text-left px-4 py-3">时间</th>
+              <th class="text-left px-4 py-3">操作者</th>
+              <th class="text-left px-4 py-3">操作</th>
+              <th class="text-left px-4 py-3 desktop-only">目标</th>
+              <th class="text-left px-4 py-3 desktop-only">IP</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody">
+            <tr><td colspan="5" class="text-center py-12 text-white/20 text-sm">加载中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="logs-pagination" class="flex items-center justify-between mt-4 text-xs text-white/30">
+        <span id="logs-pagination-info">—</span>
+        <div class="flex gap-2">
+          <button id="btn-logs-prev" class="btn-ghost px-3 py-1.5 rounded-full disabled:opacity-30" disabled>← 上一页</button>
+          <button id="btn-logs-next" class="btn-ghost px-3 py-1.5 rounded-full disabled:opacity-30" disabled>下一页 →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============================================================ -->
+<!-- 新建/编辑用户 Modal                                           -->
+<!-- ============================================================ -->
+<div id="user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden modal-overlay">
+  <div class="rounded-2xl p-6 w-full max-w-md" style="background:rgba(20,20,35,0.98);border:1px solid rgba(255,255,255,0.1);">
+    <h2 id="modal-title" class="text-white text-lg font-semibold mb-5">新建用户</h2>
+    <form id="user-form" class="flex flex-col gap-3">
+      <input type="hidden" id="form-user-id" />
+      <div>
+        <label class="text-white/30 text-[10px] uppercase tracking-wider mb-1 block">邮箱</label>
+        <input id="form-email" type="email" required
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 bg-white/5 border border-white/10 focus:border-violet-400/50 transition-all" />
+      </div>
+      <div id="form-password-group">
+        <label class="text-white/30 text-[10px] uppercase tracking-wider mb-1 block">密码</label>
+        <input id="form-password" type="password" minlength="8"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 bg-white/5 border border-white/10 focus:border-violet-400/50 transition-all" />
+      </div>
+      <div>
+        <label class="text-white/30 text-[10px] uppercase tracking-wider mb-1 block">用户名</label>
+        <input id="form-display-name" type="text"
+               class="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 bg-white/5 border border-white/10 focus:border-violet-400/50 transition-all" />
+      </div>
+      <div>
+        <label class="text-white/30 text-[10px] uppercase tracking-wider mb-1 block">角色</label>
+        <select id="form-role"
+                class="w-full rounded-xl px-4 py-2.5 text-sm text-white bg-white/5 border border-white/10 focus:border-violet-400/50 transition-all appearance-none">
+          <option value="user" class="bg-gray-900">用户 (user)</option>
+          <option value="admin" class="bg-gray-900">管理员 (admin)</option>
+        </select>
+      </div>
+      <p id="form-error" class="text-red-400 text-xs hidden"></p>
+      <div class="flex gap-3 mt-2">
+        <button type="button" id="btn-modal-cancel" class="flex-1 btn-ghost py-2.5 rounded-full text-sm font-semibold">取消</button>
+        <button type="submit" id="btn-modal-submit" class="flex-1 btn-primary py-2.5 rounded-full text-sm font-semibold">创建</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- 删除确认 Modal                                                -->
+<!-- ============================================================ -->
+<div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden modal-overlay">
+  <div class="rounded-2xl p-6 w-full max-w-sm" style="background:rgba(20,20,35,0.98);border:1px solid rgba(255,255,255,0.1);">
+    <h2 class="text-white text-lg font-semibold mb-2">确认删除</h2>
+    <p id="delete-message" class="text-white/50 text-sm mb-5">确定要删除该用户吗？此操作不可撤销。</p>
+    <p id="delete-error" class="text-red-400 text-xs mb-3 hidden"></p>
+    <div class="flex gap-3">
+      <button id="btn-delete-cancel" class="flex-1 btn-ghost py-2.5 rounded-full text-sm font-semibold">取消</button>
+      <button id="btn-delete-confirm" class="flex-1 btn-danger py-2.5 rounded-full text-sm font-semibold">删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Toast 通知                                                    -->
+<!-- ============================================================ -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden toast">
+  <div class="rounded-xl px-5 py-3 text-sm font-medium shadow-lg" id="toast-content"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// Admin Dashboard — JavaScript
+// ══════════════════════════════════════════════════
+
+const API_BASE = '/auth';
+const ADMIN_API = '/admin/api';
+
+// ── 状态 ──
+let currentUser = null;
+let usersPage = 1, usersSearch = '', usersTotalPages = 1;
+let logsPage = 1, logsTotalPages = 1;
+let deleteTargetId = null;
+
+// ── DOM 引用 ──
+const $ = (id) => document.getElementById(id);
+const loadingScreen = $('loading-screen');
+const deniedScreen = $('denied-screen');
+const mainApp = $('main-app');
+
+// ── 初始化 ──
+async function init() {
+  try {
+    const res = await fetch(API_BASE + '/me', { credentials: 'include' });
+    if (!res.ok) {
+      // 未登录 → 跳转到主页登录
+      window.location.href = '/?redirect=/admin';
+      return;
+    }
+    const data = await res.json();
+    if (!data.success || data.data.role !== 'admin') {
+      loadingScreen.classList.add('hidden');
+      deniedScreen.classList.remove('hidden');
+      return;
+    }
+    currentUser = data.data;
+    $('header-admin-name').textContent = currentUser.display_name || currentUser.email;
+    loadingScreen.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    await Promise.all([loadStats(), loadUsers()]);
+  } catch {
+    window.location.href = '/?redirect=/admin';
+  }
+}
+
+// ── 统计 ──
+async function loadStats() {
+  try {
+    const res = await fetch(ADMIN_API + '/stats', { credentials: 'include' });
+    const data = await res.json();
+    if (data.success) {
+      $('stat-total').textContent = data.data.totalUsers;
+      $('stat-today').textContent = data.data.todayNew;
+      $('stat-admin').textContent = data.data.adminCount;
+      $('stat-sessions').textContent = data.data.activeSessionCount;
+    }
+  } catch { /* 静默失败 */ }
+}
+
+// ── 用户列表 ──
+async function loadUsers(page = 1, search = usersSearch) {
+  usersPage = page;
+  usersSearch = search;
+  try {
+    const params = new URLSearchParams({ page, limit: '20' });
+    if (search) params.set('search', search);
+    const res = await fetch(ADMIN_API + '/users?' + params, { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) return;
+
+    const { users, total, totalPages } = data.data;
+    usersTotalPages = totalPages;
+    renderUsers(users, total);
+    updatePagination('users', page, totalPages, 'pagination-info', 'btn-prev-page', 'btn-next-page');
+  } catch { $('users-tbody').innerHTML = '<tr><td colspan="6" class="text-center py-12 text-red-400 text-sm">加载失败，请重试</td></tr>'; }
+}
+
+function renderUsers(users, total) {
+  const tbody = $('users-tbody');
+  if (users.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-white/20 text-sm">${usersSearch ? '没有找到匹配的用户' : '暂无用户'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = users.map((u, i) => {
+    const initial = (u.display_name || u.email)[0].toUpperCase();
+    const date = new Date(u.created_at).toLocaleDateString('zh-CN', { year:'numeric',month:'2-digit',day:'2-digit' });
+    const roleBadge = u.role === 'admin'
+      ? '<span class="badge-admin px-2 py-0.5 rounded-full text-[10px] font-semibold">管理员</span>'
+      : '<span class="badge-user px-2 py-0.5 rounded-full text-[10px] font-semibold">用户</span>';
+    const isSelf = u.id === currentUser?.id;
+    const actions = isSelf
+      ? '<span class="text-white/15 text-xs">当前用户</span>'
+      : `<button class="btn-ghost px-2 py-1 rounded-lg text-[10px]" onclick="openEditModal('${u.id}')">编辑</button>
+         <button class="btn-danger px-2 py-1 rounded-lg text-[10px] ml-1" onclick="confirmDelete('${u.id}','${escapeHtml(u.display_name || u.email)}')">删除</button>`;
+    return `<tr class="hover:bg-white/[0.02] transition-colors">
+      <td class="px-4 py-3"><div class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">${initial}</div></td>
+      <td class="px-4 py-3 text-white/80">${escapeHtml(u.display_name || '—')}</td>
+      <td class="px-4 py-3 text-white/50">${escapeHtml(u.email)}</td>
+      <td class="px-4 py-3 text-white/30 desktop-only">${date}</td>
+      <td class="px-4 py-3">${roleBadge}</td>
+      <td class="px-4 py-3 text-right">${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 分页 ──
+function updatePagination(prefix, page, totalPages, infoId, prevId, nextId) {
+  $(infoId).textContent = `第 ${page} / ${totalPages} 页`;
+  $(prevId).disabled = page <= 1;
+  $(nextId).disabled = page >= totalPages;
+}
+
+// ── 审计日志 ──
+async function loadAuditLogs(page = 1) {
+  logsPage = page;
+  try {
+    const res = await fetch(`${ADMIN_API}/audit-logs?page=${page}&limit=50`, { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) return;
+
+    const { logs, total, totalPages } = data.data;
+    logsTotalPages = totalPages;
+    renderAuditLogs(logs);
+    updatePagination('logs', page, totalPages, 'logs-pagination-info', 'btn-logs-prev', 'btn-logs-next');
+  } catch { $('logs-tbody').innerHTML = '<tr><td colspan="5" class="text-center py-12 text-red-400 text-sm">加载失败</td></tr>'; }
+}
+
+function renderAuditLogs(logs) {
+  const tbody = $('logs-tbody');
+  if (logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-white/20 text-sm">暂无操作日志</td></tr>';
+    return;
+  }
+  const actionLabels = {
+    create_user: '创建用户',
+    update_user: '编辑用户',
+    delete_user: '删除用户',
+    change_role: '变更角色',
+  };
+  const actionColors = {
+    create_user: 'text-emerald-400',
+    update_user: 'text-blue-400',
+    delete_user: 'text-red-400',
+    change_role: 'text-violet-400',
+  };
+  tbody.innerHTML = logs.map(log => {
+    const time = new Date(log.created_at).toLocaleString('zh-CN');
+    const adminName = log.admin.display_name || log.admin.email;
+    const targetName = log.target_user ? (log.target_user.display_name || log.target_user.email) : '—';
+    const actionLabel = actionLabels[log.action] || log.action;
+    const color = actionColors[log.action] || 'text-white/50';
+    return `<tr class="hover:bg-white/[0.02] transition-colors">
+      <td class="px-4 py-3 text-white/30 text-xs">${time}</td>
+      <td class="px-4 py-3 text-white/60">${escapeHtml(adminName)}</td>
+      <td class="px-4 py-3 ${color} font-medium">${actionLabel}</td>
+      <td class="px-4 py-3 text-white/40 desktop-only">${escapeHtml(targetName)}</td>
+      <td class="px-4 py-3 text-white/20 text-xs desktop-only">${log.ip_address || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Tab 切换 ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    const tab = btn.dataset.tab;
+    $('tab-users').classList.toggle('hidden', tab !== 'users');
+    $('tab-logs').classList.toggle('hidden', tab !== 'logs');
+    if (tab === 'logs') loadAuditLogs();
+  });
+});
+
+// ── 搜索 ──
+$('btn-search').addEventListener('click', () => {
+  usersSearch = $('search-input').value.trim();
+  loadUsers(1, usersSearch);
+});
+$('search-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { usersSearch = $('search-input').value.trim(); loadUsers(1, usersSearch); }
+});
+
+// ── 分页按钮 ──
+$('btn-prev-page').addEventListener('click', () => { if (usersPage > 1) loadUsers(usersPage - 1); });
+$('btn-next-page').addEventListener('click', () => { if (usersPage < usersTotalPages) loadUsers(usersPage + 1); });
+$('btn-logs-prev').addEventListener('click', () => { if (logsPage > 1) loadAuditLogs(logsPage - 1); });
+$('btn-logs-next').addEventListener('click', () => { if (logsPage < logsTotalPages) loadAuditLogs(logsPage + 1); });
+
+// ── 新建/编辑用户 Modal ──
+function openEditModal(userId) { openUserModal('edit', userId); }
+$('btn-create-user').addEventListener('click', () => openUserModal('create'));
+$('btn-modal-cancel').addEventListener('click', closeUserModal);
+$('user-modal').addEventListener('click', (e) => { if (e.target === $('user-modal')) closeUserModal(); });
+
+async function openUserModal(mode, userId) {
+  $('form-error').classList.add('hidden');
+  $('form-user-id').value = '';
+  $('form-email').value = '';
+  $('form-password').value = '';
+  $('form-display-name').value = '';
+  $('form-role').value = 'user';
+
+  if (mode === 'create') {
+    $('modal-title').textContent = '新建用户';
+    $('btn-modal-submit').textContent = '创建';
+    $('form-password-group').classList.remove('hidden');
+    $('form-password').required = true;
+  } else {
+    $('modal-title').textContent = '编辑用户';
+    $('btn-modal-submit').textContent = '保存';
+    $('form-password-group').classList.add('hidden');
+    $('form-password').required = false;
+    // 加载用户数据
+    try {
+      const res = await fetch(`${ADMIN_API}/users/${userId}`, { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        const u = data.data.user;
+        $('form-user-id').value = u.id;
+        $('form-email').value = u.email;
+        $('form-display-name').value = u.display_name || '';
+        $('form-role').value = u.role;
+      }
+    } catch { showToast('加载用户信息失败', 'error'); return; }
+  }
+  $('user-modal').classList.remove('hidden');
+}
+
+function closeUserModal() { $('user-modal').classList.add('hidden'); }
+
+$('user-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('form-error').classList.add('hidden');
+  const userId = $('form-user-id').value;
+  const isCreate = !userId;
+
+  const body = {
+    email: $('form-email').value.trim(),
+    display_name: $('form-display-name').value.trim() || undefined,
+    role: $('form-role').value,
+  };
+
+  if (isCreate) {
+    body.password = $('form-password').value;
+    if (!body.password || body.password.length < 8) {
+      showFormError('密码至少 8 位'); return;
+    }
+  }
+
+  // 清理 undefined 字段
+  Object.keys(body).forEach(k => { if (body[k] === undefined) delete body[k]; });
+  if (!isCreate && Object.keys(body).length === 0) {
+    showFormError('没有需要更新的字段'); return;
+  }
+
+  try {
+    const url = isCreate ? `${ADMIN_API}/users` : `${ADMIN_API}/users/${userId}`;
+    const method = isCreate ? 'POST' : 'PUT';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msgs = {
+        email_invalid: '邮箱格式无效',
+        email_exists: '邮箱已被使用',
+        password_too_short: '密码至少 8 位',
+        cannot_demote_self: '不能修改自己的角色',
+        last_admin: '不能移除最后一个管理员',
+      };
+      showFormError(msgs[data.error?.code] || data.message);
+      return;
+    }
+    closeUserModal();
+    showToast(isCreate ? '用户创建成功' : '用户更新成功', 'success');
+    loadUsers(usersPage, usersSearch);
+    loadStats();
+  } catch { showFormError('网络错误，请重试'); }
+});
+
+function showFormError(msg) {
+  $('form-error').textContent = msg;
+  $('form-error').classList.remove('hidden');
+}
+
+// ── 删除确认 ──
+function confirmDelete(userId, name) {
+  deleteTargetId = userId;
+  $('delete-message').textContent = `确定要删除用户「${name}」吗？此操作不可撤销。`;
+  $('delete-error').classList.add('hidden');
+  $('delete-modal').classList.remove('hidden');
+}
+$('btn-delete-cancel').addEventListener('click', () => { $('delete-modal').classList.add('hidden'); deleteTargetId = null; });
+$('delete-modal').addEventListener('click', (e) => { if (e.target === $('delete-modal')) { $('delete-modal').classList.add('hidden'); deleteTargetId = null; } });
+
+$('btn-delete-confirm').addEventListener('click', async () => {
+  if (!deleteTargetId) return;
+  $('delete-error').classList.add('hidden');
+  try {
+    const res = await fetch(`${ADMIN_API}/users/${deleteTargetId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msgs = {
+        cannot_delete_self: '不能删除自己的账户',
+        last_admin: '不能删除最后一个管理员',
+        user_not_found: '用户不存在',
+      };
+      $('delete-error').textContent = msgs[data.error?.code] || data.message;
+      $('delete-error').classList.remove('hidden');
+      return;
+    }
+    $('delete-modal').classList.add('hidden');
+    deleteTargetId = null;
+    showToast('用户已删除', 'success');
+    loadUsers(usersPage, usersSearch);
+    loadStats();
+    if ($('tab-logs').classList.contains('hidden') === false) loadAuditLogs();
+  } catch {
+    $('delete-error').textContent = '网络错误';
+    $('delete-error').classList.remove('hidden');
+  }
+});
+
+// ── Toast ──
+function showToast(msg, type) {
+  const content = $('toast-content');
+  content.textContent = msg;
+  content.style.background = type === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)';
+  content.style.border = type === 'error' ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)';
+  content.style.color = type === 'error' ? '#fca5a5' : '#6ee7b7';
+  $('toast').classList.remove('hidden');
+  setTimeout(() => $('toast').classList.add('hidden'), 3000);
+}
+
+// ── 退出 ──
+$('btn-admin-logout').addEventListener('click', async () => {
+  await fetch(API_BASE + '/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/';
+});
+
+// ── 工具 ──
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── 启动 ──
+init();
+</script>
+</body>
+</html>

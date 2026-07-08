@@ -6,6 +6,7 @@
 |------|------|
 | users | 用户账户（支持邮箱登录 + OAuth） |
 | sessions | 活跃会话（JWT 黑名单 / 多设备管理） |
+| admin_audit_log | 管理员操作审计日志 |
 
 ---
 
@@ -42,6 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
 | github_id | TEXT | Y | GitHub 账户 ID，预留 |
 | display_name | TEXT | Y | 显示名称（OAuth 获取） |
 | avatar_url | TEXT | Y | 头像 URL |
+| role | TEXT | N | 角色：'user' \| 'admin'，默认 'user' |
 | created_at | INTEGER | N | 账户创建时间 |
 | updated_at | INTEGER | N | 最后更新时间 |
 
@@ -79,6 +81,33 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 | user_agent | 记录设备，实现「查看活跃设备」 |
 | ip_address | 记录 IP，安全审计 |
 | expires_at | 过期后定期清理 |
+
+---
+
+## admin_audit_log
+
+```sql
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+    id             TEXT PRIMARY KEY,         -- UUID
+    admin_id       TEXT NOT NULL,            -- 操作者 users.id
+    action         TEXT NOT NULL,            -- 'create_user' | 'update_user' | 'delete_user' | 'change_role'
+    target_user_id TEXT,                     -- 被操作用户（无 FK 约束，删除用户后记录保留）
+    details        TEXT,                     -- JSON: {before:{...}, after:{...}}
+    ip_address     TEXT,                     -- 操作者 IP
+    created_at     INTEGER NOT NULL,         -- Unix 时间戳（秒）
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### 字段说明
+
+| 字段 | 说明 |
+|------|------|
+| admin_id | 操作者，关联 users.id（CASCADE：管理员删除后日志保留） |
+| action | 操作类型枚举 |
+| target_user_id | 被操作用户，无 FK 约束——用户删除后记录仍可查询 |
+| details | JSON 格式变更详情，存储 `{before, after}` 对比 |
+| ip_address | 操作来源 IP |
 
 ---
 

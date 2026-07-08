@@ -60,6 +60,7 @@ interface UserRow {
   email: string;
   password_hash: string | null;
   provider: string;
+  role: string;
   google_id: string | null;
   display_name: string | null;
   avatar_url: string | null;
@@ -69,7 +70,7 @@ interface UserRow {
 async function findUserByEmail(email: string, db?: D1Database): Promise<UserRow | null> {
   if (db) {
     return await db.prepare(
-      'SELECT id, email, password_hash, provider, google_id, display_name, avatar_url, created_at FROM users WHERE email = ?'
+      'SELECT id, email, password_hash, provider, role, google_id, display_name, avatar_url, created_at FROM users WHERE email = ?'
     ).bind(email).first<UserRow>();
   }
   const user = localDB.getUserByEmail(email);
@@ -79,7 +80,7 @@ async function findUserByEmail(email: string, db?: D1Database): Promise<UserRow 
 async function findUserById(id: string, db?: D1Database): Promise<UserRow | null> {
   if (db) {
     return await db.prepare(
-      'SELECT id, email, password_hash, provider, google_id, display_name, avatar_url, created_at FROM users WHERE id = ?'
+      'SELECT id, email, password_hash, provider, role, google_id, display_name, avatar_url, created_at FROM users WHERE id = ?'
     ).bind(id).first<UserRow>();
   }
   const user = localDB.getUserById(id);
@@ -127,6 +128,7 @@ function userResponse(user: UserRow) {
     id: user.id,
     email: user.email,
     provider: user.provider,
+    role: user.role,
     display_name: user.display_name,
     avatar_url: user.avatar_url,
     created_at: new Date(user.created_at * 1000).toISOString(),
@@ -167,6 +169,7 @@ authRoutes.post('/register', async (c) => {
     email,
     password_hash: passwordHash,
     provider: 'email',
+    role: 'user',
     google_id: null,
     display_name: display_name || null,
     avatar_url: null,
@@ -177,8 +180,8 @@ authRoutes.post('/register', async (c) => {
   if (c.env.DB) {
     try {
       await c.env.DB.prepare(`
-        INSERT INTO users (id, email, password_hash, provider, display_name, created_at, updated_at)
-        VALUES (?, ?, ?, 'email', ?, ?, ?)
+        INSERT INTO users (id, email, password_hash, provider, role, display_name, created_at, updated_at)
+        VALUES (?, ?, ?, 'email', 'user', ?, ?, ?)
       `).bind(id, email, passwordHash, display_name || null, now, now).run();
     } catch (e) {
       console.error('D1 insert user failed:', e);
@@ -190,6 +193,7 @@ authRoutes.post('/register', async (c) => {
     email,
     password_hash: passwordHash,
     provider: 'email',
+    role: 'user',
     google_id: null,
     github_id: null,
     display_name: display_name || null,
