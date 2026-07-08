@@ -74,7 +74,7 @@
 - [ ] 博客模块
 - [ ] 文件存储（R2 / OCI Object Storage）
 - [ ] API 速率限制
-- [ ] 管理后台（Admin Dashboard）
+- [x] 管理后台（Admin Dashboard）
 - [ ] WebSocket 实时通知
 
 ---
