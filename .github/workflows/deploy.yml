@@ -21,7 +21,27 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
-      - name: Deploy to Cloudflare Workers
+      - name: Get branch name
+        id: branch
+        run: echo "name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      # ── 分支预览部署 ──
+      - name: Deploy preview (fun-*.vieplay4fun.win)
+        if: startsWith(steps.branch.outputs.name, 'fun-')
+        run: |
+          WORKER_NAME="play4fun-${GITHUB_REF#refs/heads/}"
+          ROUTE_HOST="${GITHUB_REF#refs/heads/}.vieplay4fun.win"
+          echo "Deploying: $WORKER_NAME → $ROUTE_HOST"
+          npx wrangler deploy \
+            --config wrangler.preview.toml \
+            --name "$WORKER_NAME" \
+            --route "${ROUTE_HOST}/*"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF4GH_API }}
+
+      # ── 生产部署 ──
+      - name: Deploy production (vieplay4fun.win)
+        if: steps.branch.outputs.name == 'master'
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF4GH_API }}
