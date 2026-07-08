@@ -192,15 +192,20 @@ button {
 
 /* ── 移动端全局适配 ─────────────────────────── */
 @media (max-width: 767px) {
-  /* 主页欢迎语缩小 */
-  #homepage h1 { font-size: 1.25rem !important; line-height: 1.4 !important; }
-  #homepage .md\:text-5xl { font-size: 1.25rem !important; }
+  /* 主页欢迎语：下移到搜索栏下方 */
+  #homepage .top-20 { top: 7rem !important; }
+  #homepage .md\:top-24 { top: 7rem !important; }
+  #homepage .left-6 { left: 1rem !important; right: 1rem !important; }
+  #homepage .left-12 { left: 1rem !important; right: 1rem !important; }
+  #homepage h1 { font-size: 1.15rem !important; line-height: 1.5 !important; }
+  #homepage .md\:text-5xl { font-size: 1.15rem !important; }
   #homepage p { font-size: 0.75rem !important; margin-top: 0.5rem !important; }
-  #homepage .top-20 { top: 4rem !important; }
-  #homepage .left-6 { left: 1rem !important; }
-  #homepage .left-12 { left: 1rem !important; }
-  /* 登出按钮更小 */
+  /* 登出按钮 */
   #btn-home-signout { bottom: 1.5rem !important; left: 1rem !important; font-size: 0.75rem !important; padding: 0.5rem 1rem !important; }
+
+  /* Hero 图片手机端下移 */
+  #hero-section img { max-width: 180px !important; }
+  #hero-section .md\:pl-8 { padding: 0 !important; }
 
   /* AI 终端：卡片式，顶部留搜索栏空间 */
   #ai-terminal { padding: 12px !important; padding-top: 72px !important; }
