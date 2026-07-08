@@ -202,16 +202,11 @@ button {
   /* 登出按钮更小 */
   #btn-home-signout { bottom: 1.5rem !important; left: 1rem !important; font-size: 0.75rem !important; padding: 0.5rem 1rem !important; }
 
-  /* AI 终端全屏 */
-  #ai-terminal.p-4 { padding: 0 !important; }
-  #ai-terminal.p-8 { padding: 0 !important; }
+  /* AI 终端：卡片式，顶部留搜索栏空间 */
+  #ai-terminal { padding: 12px !important; padding-top: 72px !important; }
   #ai-terminal-window {
-    border-radius: 0 !important;
-    border: none !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
+    border-radius: 14px !important;
+    max-height: calc(100vh - 96px) !important;
   }
   #ai-terminal-input { font-size: 16px !important; }
   #ai-terminal-body { font-size: 13px !important; }
