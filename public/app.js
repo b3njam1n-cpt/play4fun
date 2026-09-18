@@ -24,6 +24,10 @@ const t = {
     aiError: '出错了，请重试。',
     adminMode: '管理模式',
     noAccess: '无权访问',
+    sitesTitle: '我的网站',
+    sitesEmpty: '还没有上传的网页',
+    sitesUploading: '上传中...',
+    sitesUpload: '上传',
   },
   en: {
     searchPlaceholder: 'Ask anything...',
@@ -41,6 +45,10 @@ const t = {
     aiError: 'Something went wrong. Try again.',
     adminMode: 'Admin Mode',
     noAccess: 'Access Denied',
+    sitesTitle: 'My Sites',
+    sitesEmpty: 'No pages uploaded yet',
+    sitesUploading: 'Uploading...',
+    sitesUpload: 'Upload',
   },
 };
 let lang = 'zh';
@@ -101,6 +109,18 @@ const btnForgotSubmit = document.getElementById('btn-forgot-submit');
 const forgotError = document.getElementById('forgot-error');
 const forgotSuccess = document.getElementById('forgot-success');
 const panelForgotForm = document.getElementById('panel-forgot-form');
+// 我的网站弹窗元素
+const sitesModal = document.getElementById('sites-modal');
+const sitesModalWindow = document.getElementById('sites-modal-window');
+const sitesList = document.getElementById('sites-list');
+const btnSites = document.getElementById('btn-sites');
+const btnSitesAdd = document.getElementById('btn-sites-add');
+const sitesUploadForm = document.getElementById('sites-upload-form');
+const sitesTitleInput = document.getElementById('sites-title-input');
+const sitesDescInput = document.getElementById('sites-desc-input');
+const sitesHtmlInput = document.getElementById('sites-html-input');
+const sitesFileInput = document.getElementById('sites-file-input');
+const sitesFormError = document.getElementById('sites-form-error');
 let aiHistory = [];
 
 // ── 模型 ────────────────────────────────────────
@@ -662,6 +682,114 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ══════════════════════════════════════════════════
+// 我的网站（HTML 托管）
+// ══════════════════════════════════════════════════
+function openSitesModal() {
+  if (!sitesModal) return;
+  sitesModal.style.display = 'flex';
+  sitesUploadForm.classList.add('hidden');
+  sitesFormError.classList.add('hidden');
+  loadSites();
+}
+function closeSitesModal() {
+  if (sitesModal) sitesModal.style.display = 'none';
+}
+btnSites?.addEventListener('click', openSitesModal);
+document.getElementById('sites-modal-close')?.addEventListener('click', closeSitesModal);
+sitesModal?.addEventListener('mousedown', (e) => { if (e.target === sitesModal) closeSitesModal(); });
+document.getElementById('btn-sites-cancel')?.addEventListener('click', () => {
+  sitesUploadForm.classList.add('hidden'); sitesFormError.classList.add('hidden');
+});
+btnSitesAdd?.addEventListener('click', () => {
+  sitesUploadForm.classList.toggle('hidden');
+  sitesFormError.classList.add('hidden');
+});
+
+// ── 列表加载与渲染（DOM API 构建，防 XSS） ──
+async function loadSites() {
+  if (!sitesList) return;
+  sitesList.innerHTML = '<p class="text-white/30 text-xs font-mono text-center py-6">加载中...</p>';
+  try {
+    const res = await fetch('/api/sites', { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const items = data.data?.items || [];
+    sitesList.innerHTML = '';
+    if (items.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'text-white/30 text-xs font-mono text-center py-6';
+      empty.textContent = tl('sitesEmpty');
+      sitesList.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'sites-card rounded-xl px-3.5 py-2.5 cursor-pointer bg-white/5 border border-white/10 hover:border-violet-400/40 hover:bg-white/10 transition-all';
+      const titleRow = document.createElement('div');
+      titleRow.className = 'flex items-center justify-between gap-2';
+      const title = document.createElement('span');
+      title.className = 'text-white/90 text-sm font-medium truncate';
+      title.textContent = item.title;
+      const date = document.createElement('span');
+      date.className = 'text-white/25 text-[10px] font-mono flex-shrink-0';
+      date.textContent = (item.created_at || '').slice(0, 10);
+      titleRow.appendChild(title); titleRow.appendChild(date);
+      const desc = document.createElement('p');
+      desc.className = 'text-white/40 text-xs mt-1 truncate';
+      desc.textContent = item.description || '—';
+      const uri = document.createElement('p');
+      uri.className = 'text-violet-300/80 text-[11px] font-mono mt-1.5 truncate';
+      uri.textContent = window.location.origin + item.uri;
+      card.appendChild(titleRow); card.appendChild(desc); card.appendChild(uri);
+      card.addEventListener('click', () => window.open(window.location.origin + item.uri, '_blank'));
+      sitesList.appendChild(card);
+    }
+  } catch {
+    sitesList.innerHTML = '<p class="text-red-300/70 text-xs font-mono text-center py-6">加载失败，请重试</p>';
+  }
+}
+
+// ── 上传流程 ──
+document.getElementById('btn-sites-file')?.addEventListener('click', () => sitesFileInput?.click());
+sitesFileInput?.addEventListener('change', () => {
+  const file = sitesFileInput.files?.[0];
+  if (!file) return;
+  if (file.size > 256 * 1024) { showError(sitesFormError, '文件超过 256KB 限制'); return; }
+  const reader = new FileReader();
+  reader.onload = () => { if (sitesHtmlInput) sitesHtmlInput.value = String(reader.result || ''); };
+  reader.readAsText(file);
+});
+document.getElementById('btn-sites-submit')?.addEventListener('click', async () => {
+  const title = sitesTitleInput.value.trim();
+  const description = sitesDescInput.value.trim();
+  const html = sitesHtmlInput.value;
+  if (!title) { showError(sitesFormError, lang === 'zh' ? '请填写标题' : 'Title is required'); return; }
+  if (!html) { showError(sitesFormError, lang === 'zh' ? '请粘贴 HTML 或选择文件' : 'Paste HTML or choose a file'); return; }
+  const btn = document.getElementById('btn-sites-submit');
+  lockButton(btn, tl('sitesUploading'));
+  try {
+    const res = await fetch('/api/sites', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, html }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msgs = { html_too_large: lang === 'zh' ? 'HTML 超过 256KB 限制' : 'HTML exceeds 256KB' };
+      showError(sitesFormError, msgs[data.error?.code] || data.message);
+      unlockButton(btn); return;
+    }
+    sitesTitleInput.value = ''; sitesDescInput.value = ''; sitesHtmlInput.value = '';
+    sitesUploadForm.classList.add('hidden');
+    sitesFormError.classList.add('hidden');
+    await loadSites();
+  } catch {
+    showError(sitesFormError, lang === 'zh' ? '网络错误' : 'Network error');
+  }
+  unlockButton(btn);
+});
 
 // ── 页面初始化 ──────────────────────────────────
 async function init() {

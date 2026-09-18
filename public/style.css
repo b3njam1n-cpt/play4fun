@@ -229,3 +229,44 @@ button {
   /* Hero 图片缩小 */
   #hero-section img { max-width: 200px !important; }
 }
+
+/* ── 我的网站（应用气泡 + 弹窗）──────────────── */
+#sites-modal {
+  animation: ai-terminal-fadein 0.2s ease;
+}
+.sites-window {
+  animation: ai-terminal-scalein 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.sites-card {
+  transition: all 0.2s ease;
+}
+/* 列表滚动条 */
+#sites-list::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+}
+#sites-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* 移动端适配 */
+@media (max-width: 767px) {
+  /* 气泡网格：下移到欢迎语副标题下方，保持 4 列 */
+  #app-grid {
+    top: 11.5rem !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    gap: 0.6rem !important;
+  }
+  #app-grid .app-bubble {
+    border-radius: 1.25rem !important;
+  }
+  /* 弹窗：卡片式 */
+  #sites-modal { padding: 12px !important; padding-top: 64px !important; }
+  #sites-modal-window {
+    border-radius: 14px !important;
+    max-height: calc(100vh - 88px) !important;
+  }
+  #sites-title-input, #sites-desc-input { font-size: 16px !important; }
+}

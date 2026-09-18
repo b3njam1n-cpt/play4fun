@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { authRoutes } from './routes/auth';
 import { chatRoutes } from './routes/chat';
 import { adminRoutes } from './routes/admin';
+import { sitesRoutes } from './routes/sites';
 import type { AppEnv } from './types';
 
 const app = new Hono<AppEnv>();
@@ -40,6 +41,7 @@ app.use('*', async (c, next) => {
 app.route('/auth', authRoutes);
 app.route('/api', chatRoutes);
 app.route('/admin/api', adminRoutes);
+app.route('/', sitesRoutes);
 
 // ── Admin 页面 ─────────────────────────────────
 app.get('/admin', (c) => c.redirect('/admin.html'));
