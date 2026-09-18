@@ -75,6 +75,7 @@
 - [ ] 文件存储（R2 / OCI Object Storage）
 - [ ] API 速率限制
 - [x] 管理后台（Admin Dashboard）
+- [x] 个人网站托管（HTML 页面上传 + /s/ 公开访问）
 - [ ] WebSocket 实时通知
 
 ---

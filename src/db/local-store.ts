@@ -41,10 +41,23 @@ interface Session {
   created_at: number;
 }
 
+interface UserPage {
+  id: string;
+  user_id: string;
+  handle: string;
+  slug: string;
+  title: string;
+  description: string;
+  html_content: string;
+  created_at: number;
+  updated_at: number;
+}
+
 // 全局内存存储（仅开发环境）
 const users = new Map<string, User>();
 const sessions = new Map<string, Session>();
 const auditLogs: AuditLogEntry[] = [];
+const userPages = new Map<string, UserPage>();
 
 export const localDB = {
   // ── 用户操作 ──
@@ -177,15 +190,58 @@ export const localDB = {
     return { logs: paged, total };
   },
 
+  // ── 用户网页操作 ──
+
+  /** 按 handle + slug 查询页面（公开访问） */
+  getPageByHandleSlug(handle: string, slug: string): UserPage | undefined {
+    for (const p of userPages.values()) {
+      if (p.handle === handle && p.slug === slug) return p;
+    }
+    return undefined;
+  },
+
+  /** 查询某 handle 下已存在的 slug 集合（用于冲突加后缀） */
+  getSlugsByHandle(handle: string): Set<string> {
+    const slugs = new Set<string>();
+    for (const p of userPages.values()) {
+      if (p.handle === handle) slugs.add(p.slug);
+    }
+    return slugs;
+  },
+
+  /** 查询 handle 是否已被其他用户占用（用于 handle 撞名加后缀） */
+  handleTakenByOther(handle: string, userId: string): boolean {
+    for (const p of userPages.values()) {
+      if (p.handle === handle && p.user_id !== userId) return true;
+    }
+    return false;
+  },
+
+  /** 创建页面 */
+  createPage(page: UserPage): void {
+    userPages.set(page.id, page);
+  },
+
+  /** 列出某用户自己的所有页面（最新优先） */
+  listPagesByUser(userId: string): UserPage[] {
+    const list: UserPage[] = [];
+    for (const p of userPages.values()) {
+      if (p.user_id === userId) list.push(p);
+    }
+    list.sort((a, b) => b.created_at - a.created_at);
+    return list;
+  },
+
   // ── 调试工具 ──
 
   _clear(): void {
     users.clear();
     sessions.clear();
     auditLogs.length = 0;
+    userPages.clear();
   },
 
-  _count(): { users: number; sessions: number; auditLogs: number } {
-    return { users: users.size, sessions: sessions.size, auditLogs: auditLogs.length };
+  _count(): { users: number; sessions: number; auditLogs: number; userPages: number } {
+    return { users: users.size, sessions: sessions.size, auditLogs: auditLogs.length, userPages: userPages.size };
   },
 };

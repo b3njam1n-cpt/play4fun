@@ -105,3 +105,28 @@
 - 合并 fun-2 → fun-3 → fun-4 → master
 
 ---
+
+---
+
+## 2026-09-18 (台式机) — fun-11 我的网站（个人 HTML 托管）
+
+**完成内容**：
+- 新表 user_pages（handle+slug 联合唯一），handle 为上传时固化的显示名净化值
+- GET/POST /api/sites（requireAuth，仅列本人）+ GET /s/:handle/:slug 公开服务
+- 公开页面 CSP sandbox + nosniff + no-store；HTML ≤256KB UTF-8 字节校验
+- 主页一行 8 气泡应用区 + 弹窗（上传/列表/URI 打开复制）
+
+**关键决策**：
+- 用户拍板：URI 用显示名（/s/mia/hello），有链接即可访问
+- handle 快照固化到行内 → 改名不影响旧地址；中文名净化为空回退邮箱前缀
+- CSP sandbox 使页面脚本 opaque origin，无法窃取本站 Cookie（不可加 allow-same-origin）
+- 预览与生产共用同一 D1：迁移必须先于分支推送；预览期上传数据会落生产库
+
+**踩坑记录**：
+- 本地端口 3000 被旧 server 进程占用，新代码路由 404 → taskkill 后重启解决
+- GitHub 直连失败，推送需带 `-c http.proxy=http://127.0.0.1:7890`（Clash）
+- gh CLI 未安装，PR 走网页端；本地 --no-ff 合并 push master 触发 CI
+
+**下一步**：
+- fun-10 欢迎语修复待用户浏览器验证后合并
+- fun-11 上线后按需补充 docs/06-sites-api.md

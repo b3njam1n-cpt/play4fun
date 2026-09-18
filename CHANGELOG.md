@@ -4,6 +4,22 @@
 
 ---
 
+## fun-11 — 我的网站（个人 HTML 托管）
+
+**合并日期**: 2026-09-18
+
+### 新增
+- 主页应用区：一行 8 个气泡，第一个「网站」气泡（sites-icon.png）
+- 弹窗管理自己上传的 HTML 页面：列表（标题/描述/URI/时间）+ 粘贴或选文件上传
+- URI 格式 `/s/{handle}/{slug}`：handle 为上传时固化的显示名净化值（改名不影响旧地址），slug 冲突加 -2/-3，handle 撞名加 -2
+- 页面有链接即可公开访问；CSP sandbox 隔离（脚本无法读取本站 Cookie/调用同源 API）+ nosniff + no-store
+- 列表仅本人可见（requireAuth + user_id 过滤）；HTML ≤256KB（UTF-8 字节校验）
+
+### 技术
+- 新表 `user_pages`（(handle, slug) 联合唯一索引，已迁移生产 D1）
+- 新路由 `src/routes/sites.ts`：GET/POST /api/sites + GET /s/:handle/:slug（公开）
+- 前端列表渲染全部 textContent，防 XSS；app.js?v=8 / style.css?v=2 缓存破环
+
 ## fun-3 — 登录后主页 + 本地开发环境
 
 **合并日期**: 2026-07-06
