@@ -28,6 +28,7 @@
 | `public/index.html` | 前端主页面 |
 | `public/app.js` | 前端逻辑（当前 v5） |
 | `src/routes/chat.ts` | AI 聊天 API（Gemini + Llama，SSE 流式） |
+| `src/routes/sites.ts` | 个人网站托管（上传/列表 + /s/:handle/:slug 公开访问） |
 | `server.js` | Node.js 本地开发入口（`npx tsx server.js`，端口 3000） |
 | `test-smoke.mjs` | 本地冒烟测试（Node.js，不依赖 Wrangler） |
 | `docs/` | **所有设计文档、API 文档、路线图** |
@@ -38,7 +39,9 @@
 - ✅ fun-2：修复 7 个注册/登录问题
 - ✅ fun-3：登录后主页 + 本地开发环境
 - ✅ fun-4：AI 对话功能（Gemini + Llama 双模型，终端式交互，SSE 流式）
-- ⬜ 下一步：配置 GEMINI_API_KEY 测试 AI 对话 → 合并 fun-2/3/4 → master
+- ✅ fun-5~fun-9：忘记密码 / AI Gateway / 终端拖拽缩放 / 移动端+CI 预览 / 管理后台
+- ✅ fun-11：我的网站 HTML 托管（8 气泡应用区 + 上传/列表 + /s/ 公开访问）
+- ⬜ fun-10：欢迎语名字不可见修复（已推送，待用户验证后合并）
 - 📋 完整路线图见 `docs/04-roadmap.md`
 
 ## 开发命令
@@ -76,6 +79,9 @@ npm run deploy    # 部署到 Cloudflare
 | 2026-07-06 | fun-2: JWT 增加 jti 声明 + Session 表写入 | 为服务端登出和多设备会话管理打基础 |
 | 2026-07-06 | fun-3: 登录后主页 + 本地开发环境 | `npx tsx server.js` 在 :3000 运行，种子测试用户，解决 Node 下 c.env 缺失 |
 | 2026-07-06 | 分支命名规范：每次大变动新分支 fun-N（N 递增） | 便于回溯和 PR 隔离 |
+| 2026-09-18 | fun-11: URI 用显示名净化值且上传时固化 | 改名不影响旧地址；中文名回退邮箱前缀 |
+| 2026-09-18 | fun-11: 公开页面 CSP `sandbox` 隔离 | 有链接即可访问（用户拍板），但脚本 opaque origin 无法窃取登录态 |
+| 2026-09-18 | fun-11: 预览与生产共用同一 D1 | 迁移先跑再推分支；预览期数据会出现在生产 |
 
 ## 重要规则
 
