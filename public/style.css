@@ -190,6 +190,26 @@ button {
   #model-selector #model-name { display: none; }
 }
 
+/* ── 主页欢迎语名字（渐变文字 + 纯色降级）────── */
+/* 修复：不用 Tailwind 的 bg-clip-text/text-transparent + drop-shadow 组合。
+   WebKit 系浏览器上 CSS filter 会让 background-clip:text 的文字渲染成完全透明，
+   导致「欢迎语在、名字消失」。渐变效果改为 @supports 渐进增强，纯色兜底。 */
+#welcome-name {
+  color: #d8b4fe; /* violet-300 纯色兜底 */
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  #welcome-name {
+    background-image: linear-gradient(to right, #c4b5fd, #f0abfc); /* violet-300 → fuchsia-300 */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+/* 欢迎语整体深度阴影：text-shadow 替代 drop-shadow 滤镜（同样避开 filter 触发问题） */
+#homepage h1 {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
 /* ── 移动端全局适配 ─────────────────────────── */
 @media (max-width: 767px) {
   /* 主页欢迎语：下移到搜索栏下方 */

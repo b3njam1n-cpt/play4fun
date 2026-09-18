@@ -86,6 +86,8 @@ npm run deploy    # 部署到 Cloudflare
 5. **每个会话结束前，更新本文件中的「当前进程」部分**
 6. **每个会话结束前，追加一条记录到 `docs/05-ai-dev-log.md`**
 7. **分支合并到 master 后，在 `CHANGELOG.md` 中追加该分支的变更记录**
+8. **🚫 永远不要直接提交到 master 分支** — 所有代码变更必须在 `fun-N` 分支上进行，推送后通过 PR 合并。master 只允许 `git pull` 拉取最新代码。
+9. **☁️ 所有代码变更必须评估与 Cloudflare 部署的联动** — 若涉及 API、路由、环境变量、D1、KV、Workers AI、AI Gateway、域名/路由、GitHub Actions 部署流程，必须同步检查并更新 `wrangler.toml`、`wrangler.preview.toml`、`.github/workflows/deploy.yml`、`.env.example`、`docs/` 等相关配置。默认生产域名为 `https://vieplay4fun.win`，分支预览域名为 `https://<branch>.vieplay4fun.win`。
 
 ## 多设备 AI 协作规则
 
