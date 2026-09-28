@@ -372,26 +372,30 @@
 
       <!-- 上传表单区（默认隐藏） -->
       <div id="sites-upload-form" class="hidden px-4 pb-4 pt-1 space-y-2.5">
-        <input id="sites-title-input" type="text" placeholder="标题（必填）"
+        <input id="sites-title-input" type="text" placeholder="标题（必填，选文件后自动填文件名）"
                class="w-full rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25 outline-none bg-white/5 border border-white/10 focus:border-violet-400/50" />
         <textarea id="sites-desc-input" placeholder="描述（可选）" rows="2"
                class="w-full rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/25 outline-none bg-white/5 border border-white/10 focus:border-violet-400/50 resize-none"></textarea>
-        <textarea id="sites-html-input" placeholder="粘贴 HTML 内容，或点右侧按钮选择 .html 文件" rows="6"
-               class="w-full rounded-lg px-3 py-2 text-xs font-mono text-white/80 placeholder:text-white/25 outline-none bg-white/5 border border-white/10 focus:border-violet-400/50 resize-y"></textarea>
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <input type="file" id="sites-file-input" accept=".html,.htm,text/html" class="hidden" />
-            <button id="btn-sites-file" class="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/60 hover:text-white/90 transition-all">选择 .html 文件</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="btn-sites-cancel" class="px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:text-white/80 transition-all">取消</button>
-            <button id="btn-sites-submit" class="px-4 py-1.5 rounded-full text-xs font-bold text-black bg-white hover:bg-white/90 active:scale-[0.97] transition-all">上传</button>
-          </div>
+        <!-- 文件上传（首选方式）：点击或拖拽 -->
+        <div id="sites-file-drop" class="rounded-lg border border-dashed border-white/20 hover:border-violet-400/50 bg-white/5 px-3 py-4 text-center cursor-pointer transition-all">
+          <input type="file" id="sites-file-input" accept=".html,.htm,text/html" class="hidden" />
+          <p id="sites-file-hint" class="text-white/50 text-xs">点击选择或拖拽 .html 文件到这里</p>
+          <p id="sites-file-name" class="text-violet-300 text-xs font-mono mt-1 hidden"></p>
+        </div>
+        <!-- 备选方式：粘贴代码 -->
+        <details>
+          <summary id="sites-paste-label" class="text-white/40 text-xs cursor-pointer select-none hover:text-white/70">或直接粘贴 HTML 代码</summary>
+          <textarea id="sites-html-input" placeholder="粘贴 HTML 内容" rows="5"
+                 class="w-full mt-2 rounded-lg px-3 py-2 text-xs font-mono text-white/80 placeholder:text-white/25 outline-none bg-white/5 border border-white/10 focus:border-violet-400/50 resize-y"></textarea>
+        </details>
+        <div class="flex items-center justify-end gap-2">
+          <button id="btn-sites-cancel" class="px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/50 hover:text-white/80 transition-all">取消</button>
+          <button id="btn-sites-submit" class="px-4 py-1.5 rounded-full text-xs font-bold text-black bg-white hover:bg-white/90 active:scale-[0.97] transition-all">上传</button>
         </div>
         <p id="sites-form-error" class="text-red-300 text-xs hidden"></p>
       </div>
     </div>
   </div>
 
-<script src="/app.js?v=8"></script></body>
+<script src="/app.js?v=9"></script></body>
 </html>

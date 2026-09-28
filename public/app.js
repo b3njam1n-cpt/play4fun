@@ -28,6 +28,10 @@ const t = {
     sitesEmpty: '还没有上传的网页',
     sitesUploading: '上传中...',
     sitesUpload: '上传',
+    sitesDelete: '删除',
+    sitesConfirmDelete: '确定删除这个页面？删除后 URI 立即失效',
+    sitesFileHint: '点击选择或拖拽 .html 文件到这里',
+    sitesPasteAlt: '或直接粘贴 HTML 代码',
   },
   en: {
     searchPlaceholder: 'Ask anything...',
@@ -49,6 +53,10 @@ const t = {
     sitesEmpty: 'No pages uploaded yet',
     sitesUploading: 'Uploading...',
     sitesUpload: 'Upload',
+    sitesDelete: 'Delete',
+    sitesConfirmDelete: 'Delete this page? Its URI will stop working immediately',
+    sitesFileHint: 'Click to choose or drag a .html file here',
+    sitesPasteAlt: 'Or paste HTML code directly',
   },
 };
 let lang = 'zh';
@@ -120,6 +128,10 @@ const sitesTitleInput = document.getElementById('sites-title-input');
 const sitesDescInput = document.getElementById('sites-desc-input');
 const sitesHtmlInput = document.getElementById('sites-html-input');
 const sitesFileInput = document.getElementById('sites-file-input');
+const sitesFileDrop = document.getElementById('sites-file-drop');
+const sitesFileHint = document.getElementById('sites-file-hint');
+const sitesFileName = document.getElementById('sites-file-name');
+const sitesPasteLabel = document.getElementById('sites-paste-label');
 const sitesFormError = document.getElementById('sites-form-error');
 let aiHistory = [];
 
@@ -215,6 +227,8 @@ function updateTexts() {
   if (homepageSubtitle) homepageSubtitle.textContent = tl('homepageSubtitle');
   if (aiTerminalInput) aiTerminalInput.placeholder = tl('aiPlaceholder');
   if (adminBtnText) adminBtnText.textContent = tl('adminMode');
+  if (sitesFileHint) sitesFileHint.textContent = tl('sitesFileHint');
+  if (sitesPasteLabel) sitesPasteLabel.textContent = tl('sitesPasteAlt');
 }
 
 // ── 表单切换 ────────────────────────────────────
@@ -735,7 +749,18 @@ async function loadSites() {
       const date = document.createElement('span');
       date.className = 'text-white/25 text-[10px] font-mono flex-shrink-0';
       date.textContent = (item.created_at || '').slice(0, 10);
-      titleRow.appendChild(title); titleRow.appendChild(date);
+      const del = document.createElement('button');
+      del.className = 'text-white/25 hover:text-red-400 text-xs font-mono flex-shrink-0 transition-colors';
+      del.textContent = '✕';
+      del.title = tl('sitesDelete');
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(tl('sitesConfirmDelete'))) return;
+        fetch('/api/sites/' + encodeURIComponent(item.id), { method: 'DELETE', credentials: 'include' })
+          .then((r) => r.json())
+          .then((d) => { if (d.success) loadSites(); });
+      });
+      titleRow.appendChild(title); titleRow.appendChild(date); titleRow.appendChild(del);
       const desc = document.createElement('p');
       desc.className = 'text-white/40 text-xs mt-1 truncate';
       desc.textContent = item.description || '—';
@@ -751,16 +776,27 @@ async function loadSites() {
   }
 }
 
-// ── 上传流程 ──
-document.getElementById('btn-sites-file')?.addEventListener('click', () => sitesFileInput?.click());
-sitesFileInput?.addEventListener('change', () => {
-  const file = sitesFileInput.files?.[0];
+// ── 上传流程（文件优先，粘贴为备选） ──
+function handleSiteFile(file) {
   if (!file) return;
-  if (file.size > 256 * 1024) { showError(sitesFormError, '文件超过 256KB 限制'); return; }
+  if (file.size > 256 * 1024) { showError(sitesFormError, lang === 'zh' ? '文件超过 256KB 限制' : 'File exceeds 256KB'); return; }
   const reader = new FileReader();
-  reader.onload = () => { if (sitesHtmlInput) sitesHtmlInput.value = String(reader.result || ''); };
+  reader.onload = () => {
+    if (sitesHtmlInput) sitesHtmlInput.value = String(reader.result || '');
+    // 未填标题时自动用文件名（去扩展名）
+    if (sitesTitleInput && !sitesTitleInput.value.trim()) {
+      sitesTitleInput.value = file.name.replace(/\.(html?|htm)$/i, '');
+    }
+    if (sitesFileName) { sitesFileName.textContent = '✓ ' + file.name; sitesFileName.classList.remove('hidden'); }
+    sitesFormError.classList.add('hidden');
+  };
   reader.readAsText(file);
-});
+}
+sitesFileDrop?.addEventListener('click', () => sitesFileInput?.click());
+sitesFileDrop?.addEventListener('dragover', (e) => { e.preventDefault(); sitesFileDrop.style.borderColor = 'rgba(192,132,252,0.6)'; });
+sitesFileDrop?.addEventListener('dragleave', () => { sitesFileDrop.style.borderColor = ''; });
+sitesFileDrop?.addEventListener('drop', (e) => { e.preventDefault(); sitesFileDrop.style.borderColor = ''; handleSiteFile(e.dataTransfer?.files?.[0]); });
+sitesFileInput?.addEventListener('change', () => { handleSiteFile(sitesFileInput.files?.[0]); sitesFileInput.value = ''; });
 document.getElementById('btn-sites-submit')?.addEventListener('click', async () => {
   const title = sitesTitleInput.value.trim();
   const description = sitesDescInput.value.trim();

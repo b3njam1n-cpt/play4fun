@@ -198,6 +198,26 @@ sitesRoutes.post('/api/sites', requireAuth, async (c) => {
   }), '上传成功', 201);
 });
 
+// ── DELETE /api/sites/:id — 删除自己的页面 ──────
+
+sitesRoutes.delete('/api/sites/:id', requireAuth, async (c) => {
+  const userId = c.get('userId');
+  if (!userId) return error(c, 401, 'unauthorized', {});
+
+  const id = c.req.param('id');
+  if (c.env.DB) {
+    const res = await c.env.DB.prepare(
+      'DELETE FROM user_pages WHERE id = ? AND user_id = ?'
+    ).bind(id, userId).run();
+    if (!res.meta.changes) return error(c, 404, 'page_not_found', {});
+  } else {
+    const page = localDB.getPageById(id);
+    if (!page || page.user_id !== userId) return error(c, 404, 'page_not_found', {});
+    localDB.deletePage(id);
+  }
+  return success(c, null, '已删除');
+});
+
 // ── GET /s/:handle/:slug — 公开访问上传的页面 ──
 
 sitesRoutes.get('/s/:handle/:slug', async (c) => {
