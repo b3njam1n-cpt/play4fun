@@ -222,6 +222,16 @@ export const localDB = {
     userPages.set(page.id, page);
   },
 
+  /** 按 id 查询页面 */
+  getPageById(id: string): UserPage | undefined {
+    return userPages.get(id);
+  },
+
+  /** 删除页面 */
+  deletePage(id: string): boolean {
+    return userPages.delete(id);
+  },
+
   /** 列出某用户自己的所有页面（最新优先） */
   listPagesByUser(userId: string): UserPage[] {
     const list: UserPage[] = [];
