@@ -162,6 +162,76 @@ Single Log-Out：同时登出所有已关联的 Session 和设备。
 
 ---
 
+## Admin API
+
+> 所有 Admin API 需要 Bearer Token 或 Cookie 认证，且用户角色必须为 `admin`。
+
+### GET /admin/api/stats
+
+获取概览统计数据。
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "data": {
+    "totalUsers": 128,
+    "todayNew": 5,
+    "adminCount": 3,
+    "activeSessionCount": 42
+  }
+}
+```
+
+### GET /admin/api/users?search=&page=1&limit=20
+
+获取用户列表（分页+搜索）。
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [{ "id": "uuid", "email": "...", "role": "user", "display_name": "..." }],
+    "total": 100,
+    "page": 1,
+    "totalPages": 5
+  }
+}
+```
+
+### GET /admin/api/users/:id
+
+获取单个用户详情 + 活跃 Session。
+
+### POST /admin/api/users
+
+管理员创建新用户。
+
+**Body**: `{ email, password, display_name?, role? }`
+
+### PUT /admin/api/users/:id
+
+更新用户信息（邮箱/用户名/角色）。
+
+**安全规则**：
+- 不能修改自己的角色
+- 不能将最后一个 admin 降级
+
+### DELETE /admin/api/users/:id
+
+删除用户。
+
+**安全规则**：
+- 不能删除自己
+- 不能删除最后一个 admin
+
+### GET /admin/api/audit-logs?page=1&limit=50
+
+获取管理员操作审计日志。
+
+---
+
 ## 统一响应格式
 
 所有 API 响应遵循：

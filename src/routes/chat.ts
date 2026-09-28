@@ -125,7 +125,7 @@ async function streamGemini(
 
   const langHint = '【重要：请用和提问相同的语言回复。】';
   const contents = [
-    ...(history || []).slice(-20).map(h => ({
+    ...(history || []).slice(-50).map(h => ({
       role: h.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: h.content }],
     })),
@@ -204,7 +204,7 @@ async function streamVision(
   const langHint = '【重要：请用和提问相同的语言回复。】';
   const input = {
     messages: [
-      ...(history || []).slice(-10),
+      ...(history || []).slice(-20),
       {
         role: 'user',
         content: [
@@ -262,7 +262,7 @@ async function streamLlama(
   // 构建消息：语言指令直接注入用户消息（Llama 对 system role 遵循度低）
   const langHint = '【重要：请用和提问相同的语言回复。如果用户用中文提问，你必须用中文回答。】';
   const messages = [
-    ...(history || []).slice(-20),
+    ...(history || []).slice(-50),
     { role: 'user', content: langHint + '\n\n' + message },
   ];
 

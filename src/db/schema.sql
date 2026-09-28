@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     github_id     TEXT,                     -- GitHub 账户 ID（预留）
     display_name  TEXT,                     -- 显示名称
     avatar_url    TEXT,                     -- 头像 URL
+    role          TEXT NOT NULL DEFAULT 'user',  -- 'user' | 'admin'
     created_at    INTEGER NOT NULL,         -- Unix 时间戳（秒）
     updated_at    INTEGER NOT NULL          -- Unix 时间戳（秒）
 );
@@ -35,3 +36,38 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+-- 角色索引
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+-- 管理员操作审计日志
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+    id             TEXT PRIMARY KEY,         -- UUID
+    admin_id       TEXT NOT NULL,            -- 操作者 users.id
+    action         TEXT NOT NULL,            -- 'create_user' | 'update_user' | 'delete_user' | 'change_role'
+    target_user_id TEXT,                     -- 被操作用户（无 FK 约束，删除用户后记录保留）
+    details        TEXT,                     -- JSON: {before:{...}, after:{...}}
+    ip_address     TEXT,                     -- 操作者 IP
+    created_at     INTEGER NOT NULL,         -- Unix 时间戳（秒）
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_admin_id ON admin_audit_log(admin_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created_at ON admin_audit_log(created_at);
+
+-- 用户上传的网页托管表
+CREATE TABLE IF NOT EXISTS user_pages (
+    id           TEXT PRIMARY KEY,         -- UUID v4
+    user_id      TEXT NOT NULL,            -- 所属用户 users.id
+    handle       TEXT NOT NULL,            -- 上传时的用户显示名净化值（改名不影响旧地址）
+    slug         TEXT NOT NULL,            -- 页面路径段（标题净化，同 handle 冲突加 -2）
+    title        TEXT NOT NULL,            -- 页面标题
+    description  TEXT DEFAULT '',          -- 页面描述
+    html_content TEXT NOT NULL,            -- 完整 HTML 内容
+    created_at   INTEGER NOT NULL,         -- Unix 时间戳（秒）
+    updated_at   INTEGER NOT NULL,         -- Unix 时间戳（秒）
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_pages_handle_slug ON user_pages(handle, slug);
+CREATE INDEX IF NOT EXISTS idx_user_pages_user_id ON user_pages(user_id);

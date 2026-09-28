@@ -22,6 +22,16 @@ const t = {
     homepageSubtitle: '这里什么都有，也什么都没有——剩下的等待你来定义。',
     aiPlaceholder: '继续对话… (Enter 发送, Esc 关闭)',
     aiError: '出错了，请重试。',
+    adminMode: '管理模式',
+    noAccess: '无权访问',
+    sitesTitle: '我的网站',
+    sitesEmpty: '还没有上传的网页',
+    sitesUploading: '上传中...',
+    sitesUpload: '上传',
+    sitesDelete: '删除',
+    sitesConfirmDelete: '确定删除这个页面？删除后 URI 立即失效',
+    sitesFileHint: '点击选择或拖拽 .html 文件到这里',
+    sitesPasteAlt: '或直接粘贴 HTML 代码',
   },
   en: {
     searchPlaceholder: 'Ask anything...',
@@ -37,6 +47,16 @@ const t = {
     homepageSubtitle: 'Everything here, and nothing here — the rest is up to you.',
     aiPlaceholder: 'Continue... (Enter to send, Esc to close)',
     aiError: 'Something went wrong. Try again.',
+    adminMode: 'Admin Mode',
+    noAccess: 'Access Denied',
+    sitesTitle: 'My Sites',
+    sitesEmpty: 'No pages uploaded yet',
+    sitesUploading: 'Uploading...',
+    sitesUpload: 'Upload',
+    sitesDelete: 'Delete',
+    sitesConfirmDelete: 'Delete this page? Its URI will stop working immediately',
+    sitesFileHint: 'Click to choose or drag a .html file here',
+    sitesPasteAlt: 'Or paste HTML code directly',
   },
 };
 let lang = 'zh';
@@ -56,6 +76,8 @@ const searchInputMobile = document.getElementById('search-input-mobile');
 const searchClearMobile = document.getElementById('search-clear-mobile');
 const btnZh = document.getElementById('btn-zh');
 const btnEn = document.getElementById('btn-en');
+const btnAdmin = document.getElementById('btn-admin');
+const adminBtnText = document.getElementById('admin-btn-text');
 const panelLoginForm = document.getElementById('panel-login-form');
 const panelRegisterForm = document.getElementById('panel-register-form');
 const panelLoggedIn = document.getElementById('panel-logged-in');
@@ -95,6 +117,22 @@ const btnForgotSubmit = document.getElementById('btn-forgot-submit');
 const forgotError = document.getElementById('forgot-error');
 const forgotSuccess = document.getElementById('forgot-success');
 const panelForgotForm = document.getElementById('panel-forgot-form');
+// 我的网站弹窗元素
+const sitesModal = document.getElementById('sites-modal');
+const sitesModalWindow = document.getElementById('sites-modal-window');
+const sitesList = document.getElementById('sites-list');
+const btnSites = document.getElementById('btn-sites');
+const btnSitesAdd = document.getElementById('btn-sites-add');
+const sitesUploadForm = document.getElementById('sites-upload-form');
+const sitesTitleInput = document.getElementById('sites-title-input');
+const sitesDescInput = document.getElementById('sites-desc-input');
+const sitesHtmlInput = document.getElementById('sites-html-input');
+const sitesFileInput = document.getElementById('sites-file-input');
+const sitesFileDrop = document.getElementById('sites-file-drop');
+const sitesFileHint = document.getElementById('sites-file-hint');
+const sitesFileName = document.getElementById('sites-file-name');
+const sitesPasteLabel = document.getElementById('sites-paste-label');
+const sitesFormError = document.getElementById('sites-form-error');
 let aiHistory = [];
 
 // ── 模型 ────────────────────────────────────────
@@ -102,16 +140,20 @@ const models = {
   gemini: { name: 'Gemini', icon: '🧠' },
   llama: { name: 'Llama', icon: '🦙' },
 };
-let currentModel = 'gemini';
+let currentModel = 'llama';
 
 function switchModel() {
   const keys = Object.keys(models);
   const idx = keys.indexOf(currentModel);
   currentModel = keys[(idx + 1) % keys.length];
   const m = models[currentModel];
+  // 同步桌面端
   if (modelName) modelName.textContent = m.name;
   if (modelIcon) modelIcon.textContent = m.icon;
   if (aiTerminalModelBadge) aiTerminalModelBadge.textContent = m.name;
+  // 同步移动端
+  if (modelNameMobile) modelNameMobile.textContent = m.name;
+  if (modelIconMobile) modelIconMobile.textContent = m.icon;
 }
 if (modelSelector) modelSelector.addEventListener('click', switchModel);
 
@@ -138,6 +180,23 @@ searchInput?.addEventListener('keydown', (e) => {
 });
 searchInputMobile?.addEventListener('input', () => searchClearMobile?.classList.toggle('hidden', !searchInputMobile.value));
 searchClearMobile?.addEventListener('mousedown', (e) => { e.preventDefault(); searchInputMobile.value = ''; searchClearMobile.classList.add('hidden'); searchInputMobile.focus(); });
+// 手机端搜索 Enter → AI Chat
+searchInputMobile?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && searchInputMobile.value.trim()) {
+    openAiTerminal(searchInputMobile.value.trim());
+    searchInputMobile.value = ''; searchClearMobile?.classList.add('hidden');
+  }
+});
+
+// ── 移动端模型选择器（同步桌面端）──────────────
+const modelSelectorMobile = document.getElementById('model-selector-mobile');
+const modelNameMobile = document.getElementById('model-name-mobile');
+const modelIconMobile = document.getElementById('model-icon-mobile');
+modelSelectorMobile?.addEventListener('click', () => {
+  switchModel();
+  if (modelNameMobile) modelNameMobile.textContent = models[currentModel].name;
+  if (modelIconMobile) modelIconMobile.textContent = models[currentModel].icon;
+});
 
 // ── 语言切换 ────────────────────────────────────
 btnZh.addEventListener('click', () => setLang('zh'));
@@ -167,6 +226,9 @@ function updateTexts() {
   if (welcomeSuffix) welcomeSuffix.textContent = tl('welcomeSuffix');
   if (homepageSubtitle) homepageSubtitle.textContent = tl('homepageSubtitle');
   if (aiTerminalInput) aiTerminalInput.placeholder = tl('aiPlaceholder');
+  if (adminBtnText) adminBtnText.textContent = tl('adminMode');
+  if (sitesFileHint) sitesFileHint.textContent = tl('sitesFileHint');
+  if (sitesPasteLabel) sitesPasteLabel.textContent = tl('sitesPasteAlt');
 }
 
 // ── 表单切换 ────────────────────────────────────
@@ -227,6 +289,18 @@ function showLoggedIn(user) {
   displayUsername.textContent = name; displayEmail.textContent = user.email;
   loginUsername.value = ''; loginPassword.value = '';
   registerUsername.value = ''; registerEmail.value = ''; registerPassword.value = '';
+
+  // Admin 按钮可见性
+  if (user.role === 'admin' && btnAdmin) {
+    btnAdmin.classList.remove('hidden');
+  }
+
+  // 登录后重定向
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect');
+  if (redirect && redirect.startsWith('/')) {
+    window.location.href = redirect;
+  }
 }
 
 document.getElementById('btn-logout').addEventListener('click', async () => {
@@ -235,6 +309,7 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
   panelLoggedIn.classList.add('hidden'); panelLoginForm.classList.remove('hidden');
   panelRegisterForm.classList.add('hidden');
   if (loginPanel) loginPanel.classList.remove('hidden');
+  if (btnAdmin) btnAdmin.classList.add('hidden');
   panelLabel.textContent = tl('loginLabel');
 });
 
@@ -306,6 +381,7 @@ document.getElementById('btn-home-signout')?.addEventListener('click', async () 
   panelLoginForm.classList.remove('hidden');
   panelRegisterForm.classList.add('hidden');
   if (loginPanel) loginPanel.classList.remove('hidden');
+  if (btnAdmin) btnAdmin.classList.add('hidden');
   panelLabel.textContent = tl('loginLabel');
 });
 
@@ -336,11 +412,8 @@ function closeAiTerminal() {
   resetTerminalPosition();
 }
 
+// 仅红色按钮关闭终端（遮罩点击、Esc 均不关闭）
 document.getElementById('ai-terminal-close')?.addEventListener('click', closeAiTerminal);
-aiTerminal?.addEventListener('click', (e) => { if (e.target === aiTerminal) closeAiTerminal(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && aiTerminal && aiTerminal.style.display !== 'none') closeAiTerminal();
-});
 
 // ══════════════════════════════════════════════════
 // AI 终端：拖拽标题栏 + 边缘调整大小
@@ -356,7 +429,9 @@ document.addEventListener('keydown', (e) => {
   let dragging = false, resizing = false, resizeDir = '';
   let startX, startY, startW, startH, startLeft, startTop;
 
-  const MIN_W = 360, MIN_H = 280, EDGE = 6;
+  const MIN_W = 360, MIN_H = 280, EDGE = 8;
+  const CURSORS = { n:'ns-resize', s:'ns-resize', e:'ew-resize', w:'ew-resize',
+                    ne:'nesw-resize', sw:'nesw-resize', nw:'nwse-resize', se:'nwse-resize' };
 
   function clamp(v, min, max) { return Math.max(min, Math.min(v, max)); }
 
@@ -376,14 +451,22 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
   });
 
-  // ── 边缘检测 ──
+  // ── 边缘检测（8 方向） ──
   function getResizeDir(e) {
     const r = win.getBoundingClientRect();
-    const onR = e.clientX > r.right - EDGE && e.clientX < r.right + EDGE;
-    const onB = e.clientY > r.bottom - EDGE && e.clientY < r.bottom + EDGE;
+    const x = e.clientX, y = e.clientY;
+    const onR = x > r.right - EDGE && x < r.right + EDGE;
+    const onL = x > r.left - EDGE && x < r.left + EDGE;
+    const onB = y > r.bottom - EDGE && y < r.bottom + EDGE;
+    const onT = y > r.top - EDGE && y < r.top + EDGE;
     if (onR && onB) return 'se';
-    if (onR && e.clientY > r.top + 36) return 'e';
-    if (onB && e.clientX > r.left + 8) return 's';
+    if (onL && onB) return 'sw';
+    if (onR && onT) return 'ne';
+    if (onL && onT) return 'nw';
+    if (onR && y > r.top + 30) return 'e';
+    if (onL && y > r.top + 30) return 'w';
+    if (onB && x > r.left + 8)  return 's';
+    if (onT && x < r.right - 8) return 'n';
     return '';
   }
 
@@ -398,12 +481,23 @@ document.addEventListener('keydown', (e) => {
     if (resizing) {
       const dx = e.clientX - startX, dy = e.clientY - startY;
       if (resizeDir.includes('e')) win.style.width = clamp(startW + dx, MIN_W, window.innerWidth * 0.95) + 'px';
+      if (resizeDir.includes('w')) {
+        const newW = clamp(startW - dx, MIN_W, window.innerWidth * 0.95);
+        win.style.left = (parseFloat(win.style.left) + startW - newW) + 'px';
+        win.style.width = newW + 'px';
+      }
       if (resizeDir.includes('s')) win.style.height = clamp(startH + dy, MIN_H, window.innerHeight * 0.92) + 'px';
+      if (resizeDir.includes('n')) {
+        const newH = clamp(startH - dy, MIN_H, window.innerHeight * 0.92);
+        win.style.top = (parseFloat(win.style.top) + startH - newH) + 'px';
+        win.style.height = newH + 'px';
+      }
       return;
     }
     if (!win.style.display || win.style.display === 'none') return;
     const d = getResizeDir(e);
-    win.style.cursor = d === 'se' ? 'nwse-resize' : d === 'e' ? 'ew-resize' : d === 's' ? 'ns-resize' : '';
+    overlay.style.cursor = CURSORS[d] || '';
+    win.style.cursor = CURSORS[d] || '';
   });
 
   // ── mousedown：开始调整大小 ──
@@ -424,10 +518,11 @@ document.addEventListener('keydown', (e) => {
     }
   });
 
-  // ── mouseup：结束 ──
+  // ── mouseup：结束（标记拖拽/调整过，防止误关闭） ──
   document.addEventListener('mouseup', () => {
+    if (dragging || resizing) overlay.dataset.wasDragged = '1';
     dragging = false; resizing = false; resizeDir = '';
-    if (win.style.cursor) win.style.cursor = '';
+    overlay.style.cursor = '';
   });
 
   // ── 双击标题栏：最大化 / 还原 ──
@@ -435,8 +530,8 @@ document.addEventListener('keydown', (e) => {
     if (e.target.closest('#ai-terminal-close') || e.target.closest('button')) return;
     const maxed = win.dataset.maxed === '1';
     if (maxed) {
-      win.style.width = win.dataset.prevW || '640px';
-      win.style.height = win.dataset.prevH || '500px';
+      win.style.width = win.dataset.prevW || '960px';
+      win.style.height = win.dataset.prevH || '640px';
       win.style.position = ''; win.style.left = ''; win.style.top = '';
       win.style.margin = ''; win.style.transform = '';
       win.dataset.maxed = '0';
@@ -457,9 +552,9 @@ document.addEventListener('keydown', (e) => {
     if (!win) return;
     win.style.position = ''; win.style.left = ''; win.style.top = '';
     win.style.margin = ''; win.style.transform = '';
-    // 固定初始尺寸：680x480，防止内容自动撑大
-    const h = clamp(window.innerHeight * 0.7, 400, 600);
-    win.style.width = '680px';
+    // 固定初始尺寸 960x640，防止内容自动撑大
+    const h = clamp(window.innerHeight * 0.75, 480, 750);
+    win.style.width = '960px';
     win.style.height = h + 'px';
     win.style.cursor = '';
     win.dataset.maxed = '0';
@@ -601,6 +696,136 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ══════════════════════════════════════════════════
+// 我的网站（HTML 托管）
+// ══════════════════════════════════════════════════
+function openSitesModal() {
+  if (!sitesModal) return;
+  sitesModal.style.display = 'flex';
+  sitesUploadForm.classList.add('hidden');
+  sitesFormError.classList.add('hidden');
+  loadSites();
+}
+function closeSitesModal() {
+  if (sitesModal) sitesModal.style.display = 'none';
+}
+btnSites?.addEventListener('click', openSitesModal);
+document.getElementById('sites-modal-close')?.addEventListener('click', closeSitesModal);
+sitesModal?.addEventListener('mousedown', (e) => { if (e.target === sitesModal) closeSitesModal(); });
+document.getElementById('btn-sites-cancel')?.addEventListener('click', () => {
+  sitesUploadForm.classList.add('hidden'); sitesFormError.classList.add('hidden');
+});
+btnSitesAdd?.addEventListener('click', () => {
+  sitesUploadForm.classList.toggle('hidden');
+  sitesFormError.classList.add('hidden');
+});
+
+// ── 列表加载与渲染（DOM API 构建，防 XSS） ──
+async function loadSites() {
+  if (!sitesList) return;
+  sitesList.innerHTML = '<p class="text-white/30 text-xs font-mono text-center py-6">加载中...</p>';
+  try {
+    const res = await fetch('/api/sites', { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const items = data.data?.items || [];
+    sitesList.innerHTML = '';
+    if (items.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'text-white/30 text-xs font-mono text-center py-6';
+      empty.textContent = tl('sitesEmpty');
+      sitesList.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const card = document.createElement('div');
+      card.className = 'sites-card rounded-xl px-3.5 py-2.5 cursor-pointer bg-white/5 border border-white/10 hover:border-violet-400/40 hover:bg-white/10 transition-all';
+      const titleRow = document.createElement('div');
+      titleRow.className = 'flex items-center justify-between gap-2';
+      const title = document.createElement('span');
+      title.className = 'text-white/90 text-sm font-medium truncate';
+      title.textContent = item.title;
+      const date = document.createElement('span');
+      date.className = 'text-white/25 text-[10px] font-mono flex-shrink-0';
+      date.textContent = (item.created_at || '').slice(0, 10);
+      const del = document.createElement('button');
+      del.className = 'text-white/25 hover:text-red-400 text-xs font-mono flex-shrink-0 transition-colors';
+      del.textContent = '✕';
+      del.title = tl('sitesDelete');
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!confirm(tl('sitesConfirmDelete'))) return;
+        fetch('/api/sites/' + encodeURIComponent(item.id), { method: 'DELETE', credentials: 'include' })
+          .then((r) => r.json())
+          .then((d) => { if (d.success) loadSites(); });
+      });
+      titleRow.appendChild(title); titleRow.appendChild(date); titleRow.appendChild(del);
+      const desc = document.createElement('p');
+      desc.className = 'text-white/40 text-xs mt-1 truncate';
+      desc.textContent = item.description || '—';
+      const uri = document.createElement('p');
+      uri.className = 'text-violet-300/80 text-[11px] font-mono mt-1.5 truncate';
+      uri.textContent = window.location.origin + item.uri;
+      card.appendChild(titleRow); card.appendChild(desc); card.appendChild(uri);
+      card.addEventListener('click', () => window.open(window.location.origin + item.uri, '_blank'));
+      sitesList.appendChild(card);
+    }
+  } catch {
+    sitesList.innerHTML = '<p class="text-red-300/70 text-xs font-mono text-center py-6">加载失败，请重试</p>';
+  }
+}
+
+// ── 上传流程（文件优先，粘贴为备选） ──
+function handleSiteFile(file) {
+  if (!file) return;
+  if (file.size > 256 * 1024) { showError(sitesFormError, lang === 'zh' ? '文件超过 256KB 限制' : 'File exceeds 256KB'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (sitesHtmlInput) sitesHtmlInput.value = String(reader.result || '');
+    // 未填标题时自动用文件名（去扩展名）
+    if (sitesTitleInput && !sitesTitleInput.value.trim()) {
+      sitesTitleInput.value = file.name.replace(/\.(html?|htm)$/i, '');
+    }
+    if (sitesFileName) { sitesFileName.textContent = '✓ ' + file.name; sitesFileName.classList.remove('hidden'); }
+    sitesFormError.classList.add('hidden');
+  };
+  reader.readAsText(file);
+}
+sitesFileDrop?.addEventListener('click', () => sitesFileInput?.click());
+sitesFileDrop?.addEventListener('dragover', (e) => { e.preventDefault(); sitesFileDrop.style.borderColor = 'rgba(192,132,252,0.6)'; });
+sitesFileDrop?.addEventListener('dragleave', () => { sitesFileDrop.style.borderColor = ''; });
+sitesFileDrop?.addEventListener('drop', (e) => { e.preventDefault(); sitesFileDrop.style.borderColor = ''; handleSiteFile(e.dataTransfer?.files?.[0]); });
+sitesFileInput?.addEventListener('change', () => { handleSiteFile(sitesFileInput.files?.[0]); sitesFileInput.value = ''; });
+document.getElementById('btn-sites-submit')?.addEventListener('click', async () => {
+  const title = sitesTitleInput.value.trim();
+  const description = sitesDescInput.value.trim();
+  const html = sitesHtmlInput.value;
+  if (!title) { showError(sitesFormError, lang === 'zh' ? '请填写标题' : 'Title is required'); return; }
+  if (!html) { showError(sitesFormError, lang === 'zh' ? '请粘贴 HTML 或选择文件' : 'Paste HTML or choose a file'); return; }
+  const btn = document.getElementById('btn-sites-submit');
+  lockButton(btn, tl('sitesUploading'));
+  try {
+    const res = await fetch('/api/sites', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, html }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msgs = { html_too_large: lang === 'zh' ? 'HTML 超过 256KB 限制' : 'HTML exceeds 256KB' };
+      showError(sitesFormError, msgs[data.error?.code] || data.message);
+      unlockButton(btn); return;
+    }
+    sitesTitleInput.value = ''; sitesDescInput.value = ''; sitesHtmlInput.value = '';
+    sitesUploadForm.classList.add('hidden');
+    sitesFormError.classList.add('hidden');
+    await loadSites();
+  } catch {
+    showError(sitesFormError, lang === 'zh' ? '网络错误' : 'Network error');
+  }
+  unlockButton(btn);
+});
 
 // ── 页面初始化 ──────────────────────────────────
 async function init() {
